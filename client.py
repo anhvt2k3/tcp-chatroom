@@ -36,10 +36,8 @@ while True:
                 try:
                     message = socks.recv(2048)
                     print (message)
-                except (OSError, ConnectionResetError):
-                    print("Server disconnected.")
-                    server.close()
-                    break
+                except:
+                    continue
                 else:
                     message = sys.stdin.readline().strip()
                     server.send(message.encode())
@@ -47,9 +45,7 @@ while True:
                     sys.stdout.write(message)
                     sys.stdout.flush()
 
-    except (OSError, ConnectionResetError):
-        print("Server disconnected.")
-        server.close()
-        break
+    except:
+        continue
 
 server.close()
