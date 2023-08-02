@@ -3,8 +3,8 @@ import threading
 
 
 # Connection Data
-host = '127.0.0.1'
-port = 55555
+host = '10.128.121.2'
+port = 49153
 
 # Starting Server
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
