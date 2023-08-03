@@ -22,7 +22,7 @@ def receive():
             else:
                 print(message)
         except:
-            # Close Connection When Error
+            # Close Connection When Error 
             print("An error occured!")
             client.close()
             break
