@@ -18,7 +18,7 @@ beginChatting = True
 
 # Listening to Server and Sending Nickname
 def receive():
-    newnick = ""
+    global nicknames
     while True:
         try:
             # Receive Message From Server
@@ -33,23 +33,12 @@ def receive():
 
             if dataDict["text"] == '\\get_nickname':
                 dataDict["text"] = nickname
-                newnick = nickname
-                client.sendall(json.dumps(dataDict).encode())
-
-            elif dataDict["text"] == '\\available_nickname':
-                print("**********")
-                print(dataDict["array"])
-                while (newnick in dataDict["array"]):
-                    # print("\'{}\' is available".format(newnick))
-                    print("Again")
-                    newnick = input("Try a new nickname: ")
-                dataDict["text"] = newnick
+                nicknames = dataDict["array"]
+                print("Online users list: {}".format(nicknames))
                 client.sendall(json.dumps(dataDict).encode())
 
             elif dataDict["text"] == '\\update_list':
-                global nicknames
                 nicknames = dataDict["array"]
-                print(nicknames)
                 
             elif dataDict["text"] == '\\close_all':
                 client.close()
@@ -78,18 +67,14 @@ def write():
         if (takenInput[:8] == "\\online"):
             print(nicknames)
             continue
-        
+
+        # To pm:  "\pm <recv's name>  message"
         if (takenInput[:4] == '\\pm '):
             dataDict["text"] = takenInput
         else:
             dataDict["text"] = '{}: {}'.format(nickname, takenInput)
 
         client.sendall(json.dumps(dataDict).encode())
-
-
-
-
-
 
 
 

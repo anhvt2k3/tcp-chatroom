@@ -59,8 +59,11 @@ def handle(client):
                 if not (rcvNick in nicknames):
                     dataDict["text"] = ">> \'{}\' is not existed!".format(rcvNick)
                     client.sendall(json.dumps(dataDict).encode())
+                elif (rcvNick == clients[idx]):
+                    dataDict["text"] = "Cannot send message to yourself"
+                    client.sendall(json.dumps(dataDict).encode())
                 else:
-                    dataDict["text"] = "{} (PM): ".format(nicknames[idx]) + message[message.find('-m ') + 3:]
+                    dataDict["text"] = "{} (PM): ".format(nicknames[idx]) + message[message.find('> ') + 2:]
                     idx = nicknames.index(rcvNick)
                     rcver = clients[idx]
                     rcver.sendall(json.dumps(dataDict).encode())
@@ -109,6 +112,7 @@ def receive():
         
         # Request And Store Nickname
         dataDict["text"] = '\\get_nickname'
+        dataDict["array"] = nicknames
         client.sendall(json.dumps(dataDict).encode())
 
 
@@ -116,12 +120,12 @@ def receive():
         data = client.recv(4096)
         dataDict = json.loads(data.decode())
         nickname = dataDict["text"]
-        if nickname in nicknames:
-            dataDict["text"] = "\\available_nickname"
-            dataDict["array"] = nicknames
-            client.sendall(json.dumps(dataDict).encode())
-            data = client.recv(4096)
-            dataDict = json.loads(data.decode())
+        # if nickname in nicknames:
+        #     dataDict["text"] = "\\available_nickname"
+        #     dataDict["array"] = nicknames
+        #     client.sendall(json.dumps(dataDict).encode())
+        #     data = client.recv(4096)
+        #     dataDict = json.loads(data.decode())
 
         nicknames.append(nickname)
         clients.append(client)
