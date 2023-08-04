@@ -4,7 +4,7 @@ import pickle
 import json
 
 # Connection Data
-host = '10.128.121.2'
+host = '192.168.1.27'
 port = 49153
 
 # Starting Server
@@ -122,7 +122,7 @@ def receive():
             client.sendall(json.dumps(dataDict).encode())
             data = client.recv(4096)
             dataDict = json.loads(data.decode())
-
+            nickname = dataDict["text"]
         nicknames.append(nickname)
         clients.append(client)
 

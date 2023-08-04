@@ -8,45 +8,27 @@ nickname = input("Choose your nickname: ")
 
 # Connecting To Server
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(('10.128.121.2', 49153))
+client.connect(('192.168.1.27', 49153))
 
 PM = False
 beginChatting = True
 nicknames = []
 beginChatting = True
 
+# Receive Message From Server
+dataDict = {
+    "text" : None,
+    "array": None
+}
 
 # Listening to Server and Sending Nickname
 def receive():
-    newnick = ""
     while True:
         try:
-            # Receive Message From Server
-            dataDict = {
-                "text" : None,
-                "array": None
-            }
-            
-            # If 'getnickname' Send Nickname
             data = client.recv(4096)
             dataDict = json.loads(data.decode())
 
-            if dataDict["text"] == '\\get_nickname':
-                dataDict["text"] = nickname
-                newnick = nickname
-                client.sendall(json.dumps(dataDict).encode())
-
-            elif dataDict["text"] == '\\available_nickname':
-                print("**********")
-                print(dataDict["array"])
-                while (newnick in dataDict["array"]):
-                    # print("\'{}\' is available".format(newnick))
-                    print("Again")
-                    newnick = input("Try a new nickname: ")
-                dataDict["text"] = newnick
-                client.sendall(json.dumps(dataDict).encode())
-
-            elif dataDict["text"] == '\\update_list':
+            if dataDict["text"] == '\\update_list':
                 global nicknames
                 nicknames = dataDict["array"]
                 print(nicknames)
@@ -56,6 +38,8 @@ def receive():
                 break
             else:
                 print(dataDict["text"],)
+
+        # except (OSError, ConnectionResetError):
         except:
             # Close Connection When Error 
             print("An error occured!")
@@ -75,6 +59,10 @@ def write():
     while True:
         takenInput = input('')
 
+        if (takenInput[:8] == "\\exit"):
+            client.close()
+            break
+
         if (takenInput[:8] == "\\online"):
             print(nicknames)
             continue
@@ -86,13 +74,27 @@ def write():
 
         client.sendall(json.dumps(dataDict).encode())
 
+while True:
+    # If 'getnickname' Send Nickname
+    data = client.recv(4096)
+    dataDict = json.loads(data.decode())
 
+    if dataDict["text"] == '\\get_nickname':
+        dataDict["text"] = nickname
+        client.sendall(json.dumps(dataDict).encode())
 
+    elif dataDict["text"] == '\\available_nickname':
+        print("**********")
+        print(dataDict["array"])
+        while (nickname in dataDict["array"]):
+            print("Again")
+            nickname = input("Try a new nickname: ")
+        dataDict["text"] = nickname
+        client.sendall(json.dumps(dataDict).encode())
 
-
-
-
-
+    else:
+        break
+    
 # Starting Threads For Listening And Writing
 receive_thread = threading.Thread(target = receive)
 receive_thread.start()
