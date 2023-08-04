@@ -120,12 +120,6 @@ def receive():
         data = client.recv(4096)
         dataDict = json.loads(data.decode())
         nickname = dataDict["text"]
-        # if nickname in nicknames:
-        #     dataDict["text"] = "\\available_nickname"
-        #     dataDict["array"] = nicknames
-        #     client.sendall(json.dumps(dataDict).encode())
-        #     data = client.recv(4096)
-        #     dataDict = json.loads(data.decode())
 
         nicknames.append(nickname)
         clients.append(client)
@@ -137,8 +131,6 @@ def receive():
         broadcast(json.dumps(dataDict).encode(), client)
 
         broadcastCList()
-        
-        # broadcastList()
 
         dataDict["text"] = '>> Connected to server!'
         client.sendall(json.dumps(dataDict).encode())

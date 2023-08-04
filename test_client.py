@@ -14,11 +14,14 @@ PM = False
 beginChatting = True
 nicknames = []
 beginChatting = True
+startToWrite = False
 
 
 # Listening to Server and Sending Nickname
 def receive():
     global nicknames
+    global nickname
+    global startToWrite
     while True:
         try:
             # Receive Message From Server
@@ -32,10 +35,16 @@ def receive():
             dataDict = json.loads(data.decode())
 
             if dataDict["text"] == '\\get_nickname':
-                dataDict["text"] = nickname
                 nicknames = dataDict["array"]
                 print("Online users list: {}".format(nicknames))
+                while (nickname in nicknames):
+                    print("Nickname \'{}\' is used".format(nickname))
+                    nickname = input(">> Try a new nickname: ")
+
+                dataDict["text"] = nickname
+                startToWrite = True
                 client.sendall(json.dumps(dataDict).encode())
+            
 
             elif dataDict["text"] == '\\update_list':
                 nicknames = dataDict["array"]
@@ -81,6 +90,9 @@ def write():
 # Starting Threads For Listening And Writing
 receive_thread = threading.Thread(target = receive)
 receive_thread.start()
+
+while (not startToWrite):
+    pass
 
 write_thread = threading.Thread(target = write)
 write_thread.start()
