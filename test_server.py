@@ -16,6 +16,10 @@ server.listen()
 clients = []
 nicknames = []
 nickname = ''
+room = {
+    'id': None,
+    'members': None # list of members' sockets
+}
 
 # Sending Messages To All Connected Clients
 def broadcast(message, sender):
@@ -44,7 +48,8 @@ def handle(client):
     while True:
         dataDict = {
             "text" : None,
-            "array": None
+            "array": None,
+            'room': 'default'
         }
         try:
             
@@ -142,6 +147,29 @@ def receive():
         # Start Handling Thread For Client
         thread = threading.Thread(target = handle, args = (client,))
         thread.start()
+
+def newchatroom():
+# having 2 chatters
+# each chatroom should have an id
+# chatroom can be created by:
+# 1. (separate server) having different port on the same ip
+# 2. having a thread for each chatroom
+# choosing the 2nd way, 'cause it's hard :)
+# and better expandabillity
+# this version support only Private chatroom for 2 members
+    # FLOW:
+    # getting '\pcr [nickname]'
+    # on new thread, run handle():
+        # display member in room
+        # list of nickname drawn from existed data
+# same as default chat room...
+# except:
+    # messages sent through the same 'client.recv' command
+        # but with non-'default' in 'room' field in dataDict
+        # sample 'room': 'vta->dvt'
+            # nickname 1: msg[0 : msg.find('-')]
+            # nickname 2: msg[msg.find('>') : len(msg)-1]
+    room
 
 
 print("Server is listening ...")

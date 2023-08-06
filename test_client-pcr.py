@@ -19,15 +19,18 @@ beginChatting = True
 dataDict = {
     "text" : None,
     "array": None,
-    'room': 0
+    'room': 'default'
 }
 
 # Listening to Server and Sending Nickname
-def receive():
+def receive(room):
     while True:
         try:
             data = client.recv(4096)
             dataDict = json.loads(data.decode())
+            
+            if dataDict['room'] != room:
+                continue
 
             if dataDict["text"] == '\\update_list':
                 global nicknames
@@ -76,7 +79,39 @@ def write():
         client.sendall(json.dumps(dataDict).encode())
 
 #Private chatroom
-def newchatroom():
+def pcr():
+        # PRIVATE CHATROOM
+# send out creating-chatroom command:
+    # pcr [target_nickname]
+# create new thread
+# run both receive() and start()
+    # messages are sent through dataDict with their specified room
+        # sample 'room': 'vta->dvt'
+# def receive():
+#     while True:
+#         try:
+#             data = client.recv(4096)
+#             dataDict = json.loads(data.decode())
+
+#             if dataDict["text"] == '\\update_list':
+#                 global nicknames
+#                 nicknames = dataDict["array"]
+#                 print(nicknames)
+                
+#             elif dataDict["text"] == '\\close_all':
+#                 client.close()
+#                 break
+#             else:
+#                 print(dataDict["text"],)
+
+#         # except (OSError, ConnectionResetError):
+#         except:
+#             # Close Connection When Error 
+#             print("You're disconnected!")
+#             client.close()
+#             break
+
+
     dataDict["text"] = '\\pcr {}'
     # Starting Threads For Listening And Writing
     receive_thread = threading.Thread(target = receive)
@@ -85,6 +120,7 @@ def newchatroom():
     write_thread = threading.Thread(target = write)
     write_thread.start()
     
+
 
 while True:
     # If 'getnickname' Send Nickname
@@ -107,6 +143,8 @@ while True:
     else:
         break
     
+
+
 # Starting Threads For Listening And Writing
 receive_thread = threading.Thread(target = receive)
 receive_thread.start()
