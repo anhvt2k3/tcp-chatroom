@@ -1,110 +1,188 @@
-# Python program to implement server side of chat room.
 import socket
-import select
-import sys
-'''Replace "thread" with "_thread" for python 3'''
-from _thread import *
+import threading
+import pickle
+import json
 
-"""The first argument AF_INET is the address domain of the
-socket. This is used when we have an Internet Domain with
-any two hosts The second argument is the type of socket.
-SOCK_STREAM means that data or characters are read in
-a continuous flow."""
+# Connection Data
+host = '192.168.1.27'
+port = 49153
+
+# Starting Server
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+server.bind((host, port))
+server.listen()
 
-# checks whether sufficient arguments have been provided
-if len(sys.argv) != 3:
-	print ("Correct usage: script, IP address, port number")
-	exit()
+# Lists For Clients and Their Nicknames
+clients = []
+nicknames = []
+nickname = ''
+room = {
+    'id': None,
+    'members': None # list of members' sockets
+}
 
-# takes the first argument from command prompt as IP address
-IP_address = str(sys.argv[1])
+# Sending Messages To All Connected Clients
+def broadcast(message, sender):
+    for client in clients:
+        if client != sender:
+            client.sendall(message)
 
-# takes second argument from command prompt as port number
-Port = int(sys.argv[2])
+def broadcastAll(message):
+    for client in clients:
+            client.sendall(message)
 
-"""
-binds the server to an entered IP address and at the
-specified port number.
-The client must be aware of these parameters
-"""
-server.bind((IP_address, Port))
- 
-"""
-listens for 100 active connections. This number can be
-increased as per convenience.
-"""
-server.listen(100)
+def broadcastCList():
+    dataDict = {}
+    dataDict["text"] = '\\update_list'
+    dataDict["array"] = nicknames
+    for client in clients:
+            client.sendall(json.dumps(dataDict).encode())
 
-list_of_clients = []
 
-def clientthread(conn, addr):
+def privateChat():
+    print("privateChat()")
 
-	# sends a message to the client whose user object is conn
-	conn.send("Welcome to this chatroom!".encode('utf-8'))
 
-	while True:
-			try:
-				message = conn.recv(2048)
-				if message:
+# Handling Messages From Clients
+def handle(client):
+    while True:
+        dataDict = {
+            "text" : None,
+            "array": None,
+            'room': 'default'
+        }
+        try:
+            
+            data = client.recv(4096)
+            dataDict = json.loads(data.decode())
+            idx = clients.index(client)
+            message = dataDict["text"]
 
-					"""prints the message and address of the
-					user who just sent the message on the server
-					terminal"""
-					print ("<" + addr[0] + "> " + message.decode('utf-8'))
+            # Private chat handle
+            if (message[:4] == "\\pm "):
+                rcvNick = message[message.find('<') + 1 : message.find('>')]
+                if not (rcvNick in nicknames):
+                    dataDict["text"] = ">> \'{}\' is not existed!".format(rcvNick)
+                    client.sendall(json.dumps(dataDict).encode())
+                else:
+                    dataDict["text"] = "{} (PM): ".format(nicknames[idx]) + message[message.find('-m ') + 3:]
+                    idx = nicknames.index(rcvNick)
+                    rcver = clients[idx]
+                    rcver.sendall(json.dumps(dataDict).encode())
+            else:
+                # Broadcasting Messages
+                broadcast(json.dumps(dataDict).encode(), client)
+                
+                # Out room handle
+                if (dataDict["text"] == nicknames[idx] + ': bye!'):
+                    clients.remove(client)
+                    dataDict["text"] = '\\close_all'
+                    client.sendall(json.dumps(dataDict).encode())
+                    client.close()
+                    nickname = nicknames[idx]
 
-					# Calls broadcast function to send message to all
-					message_to_send = "<" + addr[0] + "> " + message
-					broadcast(message_to_send, conn)
+                    dataDict["text"] = '>> {} left!'.format(nickname)
+                    broadcast(json.dumps(dataDict).encode(), client)
+                    
+                    nicknames.remove(nickname)
+                    break
+        except:
+            # Removing And Closing Clients
+            idx = clients.index(client)
+            clients.remove(client)
+            client.close()
+            nickname = nicknames[idx]
+            dataDict["text"] = '{} left!'.format(nickname)
+            broadcast(json.dumps(dataDict).encode(), client)
+            
+            nicknames.remove(nicknames[idx])
+            break
 
-				else:
-					"""message may have no content if the connection
-					is broken, in this case we remove the connection"""
-					remove(conn)
 
-			except:
-				continue
+# Receiving / Listening Function
+def receive():
+    dataDict = {
+        "text" : None,
+        "array": None
+    }
 
-"""Using the below function, we broadcast the message to all
-clients who's object is not the same as the one sending
-the message """
-def broadcast(message, connection):
-	for clients in list_of_clients:
-		if clients!=connection:
-			try:
-				clients.send(message.encode('utf-8'))
-			except:
-				clients.close()
 
-				# if the link is broken, we remove the client
-				remove(clients)
+    while True:
+        # Accept Connection
+        client, address = server.accept()
+        print("Connected with {}".format(str(address)))
+        
+        # Request And Store Nickname
+        dataDict["text"] = '\\get_nickname'
+        client.sendall(json.dumps(dataDict).encode())
 
-"""The following function simply removes the object
-from the list that was created at the beginning of
-the program"""
-def remove(connection):
-	if connection in list_of_clients:
-		list_of_clients.remove(connection)
 
-while True:
+        # Receive nick name from client
+        data = client.recv(4096)
+        dataDict = json.loads(data.decode())
+        nickname = dataDict["text"]
+        if nickname in nicknames:
+            dataDict["text"] = "\\available_nickname"
+            dataDict["array"] = nicknames
+            client.sendall(json.dumps(dataDict).encode())
+            data = client.recv(4096)
+            dataDict = json.loads(data.decode())
+            nickname = dataDict["text"]
+        nicknames.append(nickname)
+        clients.append(client)
 
-	"""Accepts a connection request and stores two parameters,
-	conn which is a socket object for that user, and addr
-	which contains the IP address of the client that just
-	connected"""
-	conn, addr = server.accept()
+        # Print And Broadcast Nickname
+        print("Nickname is {}".format(nickname))
 
-	"""Maintains a list of clients for ease of broadcasting
-	a message to all available people in the chatroom"""
-	list_of_clients.append(conn)
+        dataDict["text"] = ">> {} joined!".format(nickname)
+        broadcast(json.dumps(dataDict).encode(), client)
 
-	# prints the address of the user that just connected
-	print (addr[0] + " connected")
+        broadcastCList()
+        
+        # broadcastList()
 
-	# creates an individual thread for every user
-	# that connects
-	start_new_thread(clientthread,(conn,addr))	
+        dataDict["text"] = '>> Connected to server!'
+        client.sendall(json.dumps(dataDict).encode())
 
-conn.close()
-server.close()
+        # Start Handling Thread For Client
+        thread = threading.Thread(target = handle, args = (client,))
+        thread.start()
+
+def newchatroom():
+# having 2 chatters
+# each chatroom should have an id
+# chatroom can be created by:
+# 1. (separate server) having different port on the same ip
+# 2. having a thread for each chatroom
+# choosing the 2nd way, 'cause it's hard :)
+# and better expandabillity
+# this version support only Private chatroom for 2 members
+    # FLOW:
+    # getting '\pcr [nickname]'
+    # on new thread, run handle():
+        # display member in room
+        # list of nickname drawn from existed data
+# same as default chat room...
+# except:
+    # messages sent through the same 'client.recv' command
+        # but with non-'default' in 'room' field in dataDict
+        # sample 'room': 'vta->dvt'
+            # nickname 1: msg[0 : msg.find('-')]
+            # nickname 2: msg[msg.find('>') : len(msg)-1]
+    room
+
+def forwardfile():
+    # listen for FILE-SENDING call
+        # identify GETTER, FILESTREAM_ID, FILENAME
+    # announce GETTER
+    # take file from SENDER
+        # listen for file chunks
+        # checkif chunk belongs to file stream
+            # check dataDict['type']
+# FUNCTION TO STORE TRADED FILES CAN BE IMPLEMENTED HERE
+        # send chunk 
+            # condition for stop listening
+    # send file to GETTER
+
+print("Server is listening ...")
+receive()
