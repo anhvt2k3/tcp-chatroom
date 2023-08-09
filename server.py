@@ -2,9 +2,10 @@ import socket
 import threading
 import pickle
 import json
+import os
 
 # Connection Data
-host = '192.168.1.27'
+host = '10.128.47.14'
 port = 49153
 
 # Starting Server
@@ -38,18 +39,13 @@ def broadcastCList():
     for client in clients:
             client.sendall(json.dumps(dataDict).encode())
 
-
-def privateChat():
-    print("privateChat()")
-
-
 # Handling Messages From Clients
 def handle(client):
     while True:
         dataDict = {
             "text" : None,
             "array": None,
-            'room': 'default'
+            # 'room': 'default'
         }
         try:
             
@@ -70,7 +66,7 @@ def handle(client):
                     rcver = clients[idx]
                     rcver.sendall(json.dumps(dataDict).encode())
             
-            elif (message[:4] == '\\sf '):
+            if (message[:4] == '\\sf '):
                 forwardfile(message, client)
             
             else:
@@ -97,6 +93,7 @@ def handle(client):
             client.close()
             nickname = nicknames[idx]
             dataDict["text"] = '{} left!'.format(nickname)
+            print (dataDict['text'])
             broadcast(json.dumps(dataDict).encode(), client)
             
             nicknames.remove(nicknames[idx])
@@ -108,7 +105,7 @@ def receive():
     dataDict = {
         "text" : None,
         "array": None,
-        'room': 'default'
+        # 'room': 'default'
     }
 
 
@@ -180,14 +177,13 @@ def forwardfile(msg, client):
     dataDict = {
         "text" : None,
         "array": None,
-        'room': 'default'
+        # 'room': 'default'
     }
-    # listen for FILE-SENDING call
+    """# listen for FILE-SENDING call
         # identify GETTER, FILENAME
-            # instruction format: \sf [GETTER] [FILENAME]
-    spc1 = msg.find(' ')
-    spc2 = msg.find(' ',spc1+1)
-    GETTER = msg[spc1+1 : spc2-1] 
+            # instruction format: \sf [GETTER] [FILENAME]"""
+    word = msg.split(' ')
+    GETTER = word[1]  
     
     # Checkif GETTER is real
     if (GETTER not in nicknames):
@@ -195,7 +191,7 @@ def forwardfile(msg, client):
         client.sendall(json.dumps(dataDict).encode())
         return
 
-    FILENAME = msg[spc2+1 :]
+    FILENAME = word[2]
 
     # Confirm send file (SNDcall)
     dataDict["text"] = f"\\FILE {FILENAME}"
@@ -203,39 +199,40 @@ def forwardfile(msg, client):
     client.sendall(json.dumps(dataDict).encode())
 
     # create file (FILENAME)
-    file = open(FILENAME,'x')
-    
+    file = open(f'./FILES/{FILENAME}','wb')
     # announce GETTER
     
-    # take file from SENDER
+    """# take file from SENDER
         # listen for file chunks
         # condition for stop listening
             # try: 
                 # if able to decode, stop listen 
             # except: 
-                # file stream are still coming
+                # file stream are still coming"""
     while True:
         chunk = client.recv(4096)
         try:
-            msg = json.loads(chunk.decode())
-            if (msg == dataDict): break
+            json.loads(chunk.decode())
+            break
         except:
             file.write(chunk)
             continue
+    
+    file.close()
 # FUNCTION TO STORE TRADED FILES CAN BE IMPLEMENTED HERE
     # send file to GETTER
     print (f'>> File {FILENAME} sent to {GETTER}!')
+    dataDict['text'] = f'\\INCOMING_FILE FROM {GETTER}'
     GETTER = clients[nicknames.index(GETTER)]
-        # annouce GETTER
-    dataDict['text'] = f'\\INCOMING_FILE FROM {nicknames[clients.index(client)]}'
+        # announce GETTER
     dataDict['array'] = FILENAME
     GETTER.sendall(json.dumps(dataDict).encode())
         # send file
-    fw_file = open(FILENAME, 'r')
-    GETTER.sendall(fw_file.read().encode())
+    file = open(f'./FILES/{FILENAME}', 'rb')
+    GETTER.sendall(file.read())
         # end stream msg
     GETTER.sendall(json.dumps(dataDict).encode())
-    fw_file.close()
+    file.close()
 
 print("Server is listening ...")
 receive()
