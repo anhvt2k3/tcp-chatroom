@@ -69,6 +69,10 @@ def handle(client):
                     idx = nicknames.index(rcvNick)
                     rcver = clients[idx]
                     rcver.sendall(json.dumps(dataDict).encode())
+            
+            elif (message[:4] == '\\sf '):
+                forwardfile(message, client)
+            
             else:
                 # Broadcasting Messages
                 broadcast(json.dumps(dataDict).encode(), client)
@@ -103,7 +107,8 @@ def handle(client):
 def receive():
     dataDict = {
         "text" : None,
-        "array": None
+        "array": None,
+        'room': 'default'
     }
 
 
@@ -171,18 +176,66 @@ def newchatroom():
             # nickname 2: msg[msg.find('>') : len(msg)-1]
     room
 
-def forwardfile():
+def forwardfile(msg, client):
+    dataDict = {
+        "text" : None,
+        "array": None,
+        'room': 'default'
+    }
     # listen for FILE-SENDING call
-        # identify GETTER, FILESTREAM_ID, FILENAME
+        # identify GETTER, FILENAME
+            # instruction format: \sf [GETTER] [FILENAME]
+    spc1 = msg.find(' ')
+    spc2 = msg.find(' ',spc1+1)
+    GETTER = msg[spc1+1 : spc2-1] 
+    
+    # Checkif GETTER is real
+    if (GETTER not in nicknames):
+        dataDict["text"] = ">> \'{}\' is not existed!".format(GETTER)
+        client.sendall(json.dumps(dataDict).encode())
+        return
+
+    FILENAME = msg[spc2+1 :]
+
+    # Confirm send file (SNDcall)
+    dataDict["text"] = f"\\FILE {FILENAME}"
+    dataDict["array"] = f'\\TO {GETTER}'
+    client.sendall(json.dumps(dataDict).encode())
+
+    # create file (FILENAME)
+    file = open(FILENAME,'x')
+    
     # announce GETTER
+    
     # take file from SENDER
         # listen for file chunks
-        # checkif chunk belongs to file stream
-            # check dataDict['type']
+        # condition for stop listening
+            # try: 
+                # if able to decode, stop listen 
+            # except: 
+                # file stream are still coming
+    while True:
+        chunk = client.recv(4096)
+        try:
+            msg = json.loads(chunk.decode())
+            if (msg == dataDict): break
+        except:
+            file.write(chunk)
+            continue
 # FUNCTION TO STORE TRADED FILES CAN BE IMPLEMENTED HERE
-        # send chunk 
-            # condition for stop listening
     # send file to GETTER
+    print (f'>> File {FILENAME} sent to {GETTER}!')
+    GETTER = clients[nicknames.index(GETTER)]
+        # annouce GETTER
+    dataDict['text'] = f'\\INCOMING_FILE FROM {nicknames[clients.index(client)]}'
+    dataDict['array'] = FILENAME
+    GETTER.sendall(json.dumps(dataDict).encode())
+        # send file
+    fw_file = open(FILENAME, 'r')
+    GETTER.sendall(fw_file.read().encode())
+        # end stream msg
+    GETTER.sendall(json.dumps(dataDict).encode())
+    fw_file.close()
 
 print("Server is listening ...")
 receive()

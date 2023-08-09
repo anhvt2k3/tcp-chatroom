@@ -22,8 +22,7 @@ def receive(room):
     dataDict = {
         "text" : None,
         "array": None,
-        'room': 'default',
-        'type': 'msg' # 'msg' or 'file'
+        'room': 'default' 
     }
     
     while True:
@@ -38,7 +37,13 @@ def receive(room):
                 global nicknames
                 nicknames = dataDict["array"]
                 print(nicknames)
-                
+            
+            elif dataDict["text"][:5] == '\\FILE':
+                sendfile(dataDict)
+
+            elif dataDict["text"][:14] == '\\INCOMING_FILE':
+                recvfile(dataDict)
+
             elif dataDict["text"] == '\\close_all':
                 client.close()
                 break
@@ -60,8 +65,7 @@ def write():
     dataDict = {
         "text" : None,
         "array": None,
-        'room': 'default',
-        'type': 'msg'
+        'room': 'default'
     }
 
     while True:
@@ -115,44 +119,53 @@ def pcr(room):
 #             break
     room
 
-def sendfile():
-    # client.sendall(json.dumps(dataDict).encode())
-    STREAM = 1024
-    FILENAME = "file.txt"
-    dataDict['type'] = 'file'
-    dataDict['text'] = FILENAME
-    dataDict['array'] = ''
+def sendfile(SNDcall):
+    # dataDict receiving
+        # send data
+        # retrieve data
+        # decode
+        # loads to json
+        # assign
+    # server confimation
+    FILENAME = SNDcall['text'].split(' ')[1]
 
-    # announce server
     # send file
-    """ Opening and reading the file data. """
+        # open file
     file = open(FILENAME, "r")
 
-    """ Sending the filename to the server. """
-    client.sendall(json.dumps(dataDict).encode())
-    msg = client.recv(STREAM).decode()
+        # send file
+    client.sendall(file.read().encode())
     
-    print(f"[SERVER]: {msg}")
- 
-    """ Sending the file data to the server. """
-    dataDict['array'] = file.read()
-    client.sendall(json.dumps(dataDict).encode())
-    
-    msg = client.recv(STREAM).decode()
-    print(f"[SERVER]: {msg}")
- 
-    # """ Closing the file. """
-    # file.close()
+        # send a msg to end file stream
+    client.sendall(json.dumps(SNDcall).encode())
+    print (f'>> File {FILENAME} sent!')
+     
+        # close file
+    file.close()
 
-def recvfile():
+def recvfile(RECVcall):
     # analyze file receive signal
-        # get FILENAME, FILESTREAM_ID
+        # get FILENAME
+    FILENAME = RECVcall['array']
+    # create file
+        # open file
+    file = open(FILENAME, "x")
     # listen for file chunks
         # checkif chunks belong to file stream
-            # check dataDict['type']
-        # stop listen
-    # create file
+    while True:
+        chunk = client.recv(4096)
+        try:
+            msg = json.loads(chunk.decode())
+            if (msg == RECVcall): break
+        except:
+            file.write(chunk)
+            continue            
     # write file
+        # stop listen
+    print (f'>> File {FILENAME} received!')
+        # close file
+    file.close()
+
 
 while True:
     # If 'getnickname' Send Nickname
