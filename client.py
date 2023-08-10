@@ -10,7 +10,7 @@ nickname = input("Choose your nickname: ")
 
 # Connecting To Server
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(('10.128.47.14', 49153))
+client.connect(('192.168.1.3', 49153))
 
 PM = False
 beginChatting = True
@@ -24,7 +24,7 @@ def receive():
     dataDict = {
         "text" : None,
         "array": None,
-        # 'room': 'default' 
+        # 'room': '*' 
     }
     
     while True:
@@ -40,18 +40,15 @@ def receive():
                 nicknames = dataDict["array"]
                 print(nicknames)
             
-#                   *** SENDING FILES *** 
+#           *** SENDING FILES *** 
             elif dataDict["text"][:5] == '\\FILE':
                 # server confimation
                 FILENAME = dataDict['text'].split(' ')[1]
-
                 # send file
                     # open file
                 file = open(f'./{FILENAME}', "rb")
-
                     # send file
                 client.sendall(file.read())
-                print (file.read())
                     # send a msg to end file stream
                 client.sendall(json.dumps(dataDict).encode())
                 print (dataDict)
@@ -60,7 +57,7 @@ def receive():
                     # close file
                 file.close()
                 
-#                   *** RECEVING FILES ***
+#           *** RECEVING FILES ***
             elif dataDict["text"][:14] == '\\INCOMING_FILE':
                 # analyze file receive signal
                     # get FILENAME
@@ -105,7 +102,7 @@ def write():
     dataDict = {
         "text" : None,
         "array": None,
-        # 'room': 'default'
+        # 'room': '*'
     }
 
     while True:
@@ -133,16 +130,10 @@ def pcr():
         subprocess.run(["start", "/wait", "cmd", "/c", f'{commands} & pause'], shell=True)
 
     command_to_run = [
-    'cd C:/Users/Admin/Desktop/cn-proj-1/',
-    'python client.py 1 1'
+    f'cd {os.getcwd()}',
+    f'python client.py {nickname} {dataDict["array"]}'
     ]
     open_new_terminal(command_to_run)
-# send out creating-chatroom command:
-    # pcr [target_nickname]
-# create new thread
-# run both receive() and start()
-    # messages are sent through dataDict with their specified room
-        # sample 'room': 'vta->dvt'
 
 while True:
     # If 'getnickname' Send Nickname

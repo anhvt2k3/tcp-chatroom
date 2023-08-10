@@ -5,7 +5,7 @@ import json
 import os
 
 # Connection Data
-host = '10.128.47.14'
+host = '192.168.1.3'
 port = 49153
 
 # Starting Server
@@ -17,10 +17,6 @@ server.listen()
 clients = []
 nicknames = []
 nickname = ''
-room = {
-    'id': None,
-    'members': None # list of members' sockets
-}
 
 # Sending Messages To All Connected Clients
 def broadcast(message, sender):
@@ -45,7 +41,7 @@ def handle(client):
         dataDict = {
             "text" : None,
             "array": None,
-            # 'room': 'default'
+            # 'room': '*'
         }
         try:
             
@@ -105,7 +101,7 @@ def receive():
     dataDict = {
         "text" : None,
         "array": None,
-        # 'room': 'default'
+        # 'room': '*'
     }
 
 
@@ -140,9 +136,7 @@ def receive():
         broadcast(json.dumps(dataDict).encode(), client)
 
         broadcastCList()
-        
-        # broadcastList()
-
+    
         dataDict["text"] = '>> Connected to server!'
         client.sendall(json.dumps(dataDict).encode())
 
@@ -151,6 +145,7 @@ def receive():
         thread.start()
 
 def newchatroom():
+    """
 # having 2 chatters
 # each chatroom should have an id
 # chatroom can be created by:
@@ -164,20 +159,20 @@ def newchatroom():
     # on new thread, run handle():
         # display member in room
         # list of nickname drawn from existed data
-# same as default chat room...
+# same as * chat room...
 # except:
     # messages sent through the same 'client.recv' command
-        # but with non-'default' in 'room' field in dataDict
+        # but with non-'*' in 'room' field in dataDict
         # sample 'room': 'vta->dvt'
             # nickname 1: msg[0 : msg.find('-')]
-            # nickname 2: msg[msg.find('>') : len(msg)-1]
+            # nickname 2: msg[msg.find('>') : len(msg)-1]"""
     room
 
 def forwardfile(msg, client):
     dataDict = {
         "text" : None,
         "array": None,
-        # 'room': 'default'
+        # 'room': '*'
     }
     """# listen for FILE-SENDING call
         # identify GETTER, FILENAME
@@ -186,7 +181,7 @@ def forwardfile(msg, client):
     GETTER = word[1]  
     
     # Checkif GETTER is real
-    if (GETTER not in nicknames):
+    if (GETTER not in nicknames and GETTER != '*'):
         dataDict["text"] = ">> \'{}\' is not existed!".format(GETTER)
         client.sendall(json.dumps(dataDict).encode())
         return
@@ -221,17 +216,28 @@ def forwardfile(msg, client):
     file.close()
 # FUNCTION TO STORE TRADED FILES CAN BE IMPLEMENTED HERE
     # send file to GETTER
-    print (f'>> File {FILENAME} sent to {GETTER}!')
-    dataDict['text'] = f'\\INCOMING_FILE FROM {GETTER}'
-    GETTER = clients[nicknames.index(GETTER)]
-        # announce GETTER
-    dataDict['array'] = FILENAME
-    GETTER.sendall(json.dumps(dataDict).encode())
-        # send file
-    file = open(f'./FILES/{FILENAME}', 'rb')
-    GETTER.sendall(file.read())
-        # end stream msg
-    GETTER.sendall(json.dumps(dataDict).encode())
+    print (f">> File {FILENAME} sent to {GETTER if GETTER != '*' else 'All'}!")
+    dataDict['text'] = '\\INCOMING_FILE'
+    if GETTER != '*':
+        GETTER = clients[nicknames.index(GETTER)]
+            # announce GETTER
+        dataDict['array'] = FILENAME
+        GETTER.sendall(json.dumps(dataDict).encode())
+            # send file
+        file = open(f'./FILES/{FILENAME}', 'rb')
+        GETTER.sendall(file.read())
+            # end stream msg
+        GETTER.sendall(json.dumps(dataDict).encode())
+    else:
+            # announce GETTER
+        dataDict['array'] = FILENAME
+        broadcast(json.dumps(dataDict).encode(), client)
+            # send file
+        file = open(f'./FILES/{FILENAME}', 'rb')
+        broadcast(file.read(), client)
+            # end stream msg
+        broadcast(json.dumps(dataDict).encode(), client)
+        
     file.close()
 
 print("Server is listening ...")
