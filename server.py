@@ -14,23 +14,17 @@ server.bind((host, port))
 server.listen()
 
 # Lists For Clients and Their Nicknames
-clients = []
-nicknames = []
+glob_clients = []
+glob_nicknames = []
 nickname = ''
 
 # Handling Messages From Clients
 def handle(client, mode, pcr_clients, pcr_nicknames):
-    global clients 
-    global nicknames 
-    if mode == 'pcr':
-        clients = pcr_clients
-        nicknames = pcr_nicknames
-    
     # Sending Messages To All Connected Clients
     def broadcast(message, sender):
-        for _ in clients:
-            if _ != sender:
-                _.sendall(message)
+        for client_ in clients:
+            if client_ != sender:
+                client_.sendall(message)
 
     def forwardfile(msg, client):
         dataDict = {
@@ -110,8 +104,11 @@ def handle(client, mode, pcr_clients, pcr_nicknames):
             "array": None,
             # 'room': '*'
         }
+
+        clients = pcr_clients if mode == 'pcr' else glob_clients
+        nicknames = pcr_nicknames if mode == 'pcr' else glob_nicknames
+
         try:
-            
             data = client.recv(4096)
             dataDict = json.loads(data.decode())
             idx = clients.index(client)
@@ -129,9 +126,11 @@ def handle(client, mode, pcr_clients, pcr_nicknames):
                     rcver = clients[idx]
                     rcver.sendall(json.dumps(dataDict).encode())
             
+            # Send file handle
             if (message[:4] == '\\sf '):
                 forwardfile(message, client)
             
+            # Private chatroom handle
             if (message[:4] == '\\pcr'):
                 dataDict['text'] = '>> INVOKE PCR'
                 dataDict['array'] = 'pcr'
@@ -165,7 +164,7 @@ def handle(client, mode, pcr_clients, pcr_nicknames):
             clients.remove(client)
             client.close()
             nickname = nicknames[idx]
-            dataDict["text"] = '{} left!'.format(nickname)
+            dataDict["text"] = '{}{} left!'.format('Private ' if mode == 'pcr' else '',nickname)
             print (dataDict['text'])
             broadcast(json.dumps(dataDict).encode(), client)
             
@@ -175,30 +174,30 @@ def handle(client, mode, pcr_clients, pcr_nicknames):
 
 # Receiving / Listening Function
 def receive():
-    dataDict = {
-        "text" : None,
-        "array": None,
-        # 'room': '*'
-    }
-
-    # PCR lists
-    pcr_nicknames = []
-    pcr_clients = []
-    
     # Sending Messages To All Connected Clients
     def broadcast(message, sender):
-        for client in clients:
+        for client in glob_clients:
             if client != sender:
                 client.sendall(message)
 
-    def broadcastCList():
+    def broadcastCList(glob_clients, glob_nicknames):
         dataDict = {}
         dataDict["text"] = '\\update_list'
-        dataDict["array"] = nicknames
-        for client in clients:
+        dataDict["array"] = glob_nicknames
+        for client in glob_clients:
                 client.sendall(json.dumps(dataDict).encode())
+    
+    # PCR lists
+    pcr_nicknames = []
+    pcr_clients = []
 
     while True:
+        dataDict = {
+            "text" : None,
+            "array": None,
+            # 'room': '*'
+        }
+
         # Accept Connection
         client, address = server.accept()
         print("Connected with {}".format(str(address)))
@@ -217,15 +216,21 @@ def receive():
             pcr_nicknames.append(nickname)
             pcr_clients.append(client)
             if len(pcr_clients) == 2:
-                for client in pcr_clients:
-                    thread = threading.Thread(target = handle, args = (client,'pcr',pcr_clients, pcr_nicknames, ))
+                broadcastCList(pcr_clients, pcr_nicknames)
+                broadcastCList(pcr_clients, pcr_nicknames)
+
+                for client_ in pcr_clients:
+                    thread = threading.Thread(target = handle, args = (client_,'pcr',pcr_clients, pcr_nicknames, ))
                     thread.start()
+
+                pcr_nicknames = []
+                pcr_clients = []
 
         # Normal case to default chatroom 
         else:
-            if nickname in nicknames:
+            if nickname in glob_nicknames:
                 dataDict["text"] = "\\available_nickname"
-                dataDict["array"] = nicknames
+                dataDict["array"] = glob_nicknames
                 client.sendall(json.dumps(dataDict).encode())
                 data = client.recv(4096)
                 dataDict = json.loads(data.decode())
@@ -233,8 +238,8 @@ def receive():
 
 
             # Append list
-            nicknames.append(nickname)
-            clients.append(client)
+            glob_nicknames.append(nickname)
+            glob_clients.append(client)
 
             # Print And Broadcast Nickname
             print("Nickname is {}".format(nickname))
@@ -242,7 +247,7 @@ def receive():
             dataDict["text"] = ">> {} joined!".format(nickname)
             broadcast(json.dumps(dataDict).encode(), client)
 
-            broadcastCList()
+            broadcastCList(glob_clients, glob_nicknames)
         
             dataDict["text"] = '>> Connected to server!'
             client.sendall(json.dumps(dataDict).encode())

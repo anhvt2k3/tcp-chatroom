@@ -22,6 +22,7 @@ beginChatting = True
 
 # Listening to Server and Sending Nickname
 def receive():
+    # print ('receiving')
     dataDict = {
         "text" : None,
         "array": None,
@@ -33,9 +34,6 @@ def receive():
             data = client.recv(4096)
             dataDict = json.loads(data.decode())
             
-            # if dataDict['room'] != room:
-            #     continue
-
             if dataDict["text"] == '\\update_list':
                 global nicknames
                 nicknames = dataDict["array"]
@@ -52,7 +50,6 @@ def receive():
                 client.sendall(file.read())
                     # send a msg to end file stream
                 client.sendall(json.dumps(dataDict).encode())
-                print (dataDict)
                 print (f'>> File {FILENAME} sent!')
                 
                     # close file
@@ -105,6 +102,7 @@ def receive():
 
 # Sending Messages To Server
 def write():
+    # print ('writing')
     dataDict = {
         "text" : None,
         "array": None,
@@ -114,7 +112,7 @@ def write():
     while True:
         takenInput = input('')
 
-        if (takenInput[:8] == "\\exit"):
+        if (takenInput[:2] == "/*"):
             client.close()
             break
 
@@ -132,13 +130,15 @@ def write():
 def pcr():
         # PRIVATE CHATROOM
     def open_new_terminal(commands):
-        commands = "&".join(commands)
-        subprocess.run(["start", "/wait", "cmd", "/c", f'{commands}'], shell=True)
+        commands = " & ".join(commands)
+        subprocess.run(["start", "cmd", "/c", f'{commands}'], shell=True)
 
     command_to_run = [
     f'cd {os.getcwd()}',
     f'python client.py {nickname}'
     ]
+
+    # threading.Thread(target= open_new_terminal, args=(command_to_run, )).start()
     open_new_terminal(command_to_run)
 
 while True:
@@ -147,7 +147,8 @@ while True:
     dataDict = json.loads(data.decode())
 
     # Identify pcr
-    if len(sys.argv) > 1: dataDict['array'] = 'pcr'
+    if len(sys.argv) > 1: 
+        dataDict['array'] = 'pcr'
 
     if dataDict["text"] == '\\get_nickname':
         dataDict["text"] = nickname

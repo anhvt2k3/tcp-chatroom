@@ -13,4 +13,4 @@
       - user might send messages during file_sending
         - Sol 1: block Write
         - Sol 2: handle all inputs
-        - Sol 3: research `sendall` function for other methods
+        - Sol 3: research `sendall` function for other methods{"text": "\\FILE README.md", "array": "\\TO *"}{"text": "\\INCOMING_FILE", "array": "README.md"}{"text": "\\sf * README.md", "array": null}
