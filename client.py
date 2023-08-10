@@ -4,13 +4,14 @@ import pickle
 import json
 import os
 import subprocess
+import sys
 
 # Choosing Nickname
-nickname = input("Choose your nickname: ")
+nickname = sys.argv[1] if len(sys.argv) > 1 else input("Choose your nickname: ")
 
 # Connecting To Server
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(('192.168.1.3', 49153))
+client.connect(('192.168.0.73', 49153))
 
 PM = False
 beginChatting = True
@@ -131,7 +132,7 @@ def pcr():
 
     command_to_run = [
     f'cd {os.getcwd()}',
-    f'python client.py {nickname} {dataDict["array"]}'
+    f'python client.py {nickname}'
     ]
     open_new_terminal(command_to_run)
 
@@ -139,6 +140,9 @@ while True:
     # If 'getnickname' Send Nickname
     data = client.recv(4096)
     dataDict = json.loads(data.decode())
+
+    # Identify pcr
+    if len(sys.argv) > 1: dataDict['array'] = 'pcr'
 
     if dataDict["text"] == '\\get_nickname':
         dataDict["text"] = nickname
