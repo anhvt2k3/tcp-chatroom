@@ -20,14 +20,17 @@ nickname = ''
 
 # Handling Messages From Clients
 def handle(client, mode, pcr_clients, pcr_nicknames):
+    global clients 
+    global nicknames 
     if mode == 'pcr':
         clients = pcr_clients
         nicknames = pcr_nicknames
+    
     # Sending Messages To All Connected Clients
     def broadcast(message, sender):
-        for client in clients:
-            if client != sender:
-                client.sendall(message)
+        for _ in clients:
+            if _ != sender:
+                _.sendall(message)
 
     def forwardfile(msg, client):
         dataDict = {
@@ -129,6 +132,16 @@ def handle(client, mode, pcr_clients, pcr_nicknames):
             if (message[:4] == '\\sf '):
                 forwardfile(message, client)
             
+            if (message[:4] == '\\pcr'):
+                dataDict['text'] = '>> INVOKE PCR'
+                dataDict['array'] = 'pcr'
+
+                getter = message.split(' ')[1]
+                getter = clients[nicknames.index(getter)]
+
+                getter.sendall(json.dumps(dataDict).encode())
+                client.sendall(json.dumps(dataDict).encode())
+
             else:
                 # Broadcasting Messages
                 broadcast(json.dumps(dataDict).encode(), client)

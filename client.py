@@ -85,6 +85,11 @@ def receive():
                     # close file
                 file.close()
 
+#           *** PCR ***
+            elif dataDict['text'] == '>> INVOKE PCR':
+                if dataDict['array'] != 'pcr': print ('>> INVOKE FAILED!')
+                pcr()
+
             elif dataDict["text"] == '\\close_all':
                 client.close()
                 break
@@ -116,8 +121,8 @@ def write():
         if (takenInput[:8] == "\\online"):
             print(nicknames)
             continue
-        
-        if (takenInput[:4] == '\\pm ' or takenInput[:4] == '\\sf '):
+
+        if (takenInput[:4] == '\\pm ' or takenInput[:4] == '\\sf ' or takenInput[:4] == '\\pcr'):
             dataDict["text"] = takenInput
         else:
             dataDict["text"] = '{}: {}'.format(nickname, takenInput)
@@ -128,7 +133,7 @@ def pcr():
         # PRIVATE CHATROOM
     def open_new_terminal(commands):
         commands = "&".join(commands)
-        subprocess.run(["start", "/wait", "cmd", "/c", f'{commands} & pause'], shell=True)
+        subprocess.run(["start", "/wait", "cmd", "/c", f'{commands}'], shell=True)
 
     command_to_run = [
     f'cd {os.getcwd()}',
@@ -137,7 +142,7 @@ def pcr():
     open_new_terminal(command_to_run)
 
 while True:
-    # If 'getnickname' Send Nickname
+    # If 'getnickname' Send Nickname``
     data = client.recv(4096)
     dataDict = json.loads(data.decode())
 
