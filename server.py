@@ -248,6 +248,7 @@ def receive():
             broadcast(json.dumps(dataDict).encode(), client)
 
             broadcastCList(glob_clients, glob_nicknames)
+            # broadcastCList(glob_clients, glob_nicknames)
         
             dataDict["text"] = '>> Connected to server!'
             client.sendall(json.dumps(dataDict).encode())
