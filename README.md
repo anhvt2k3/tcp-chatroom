@@ -14,3 +14,5 @@
         - Sol 1: block Write
         - Sol 2: handle all inputs
         - Sol 3: research `sendall` function for other methods
+
+- delete pcr after client dies

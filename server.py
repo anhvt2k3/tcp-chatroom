@@ -1,11 +1,10 @@
 import socket
 import threading
-import pickle
 import json
-import os
+import sys
 
 # Connection Data
-host = '192.168.0.73'
+host = '192.168.0.199'
 port = 49153
 
 # Starting Server
@@ -99,14 +98,14 @@ def handle(client, mode, pcr_clients, pcr_nicknames):
         file.close()
 
     while True:
-        dataDict = {
-            "text" : None,
-            "array": None,
-            # 'room': '*'
-        }
-
         clients = pcr_clients if mode == 'pcr' else glob_clients
         nicknames = pcr_nicknames if mode == 'pcr' else glob_nicknames
+
+        dataDict = {
+            "text" : None,
+            "array": nicknames,
+            # 'room': '*'
+        }
 
         try:
             data = client.recv(4096)
@@ -144,7 +143,7 @@ def handle(client, mode, pcr_clients, pcr_nicknames):
             else:
                 # Broadcasting Messages
                 broadcast(json.dumps(dataDict).encode(), client)
-                
+
                 # Out room handle
                 if (dataDict["text"] == nicknames[idx] + ': bye!'):
                     clients.remove(client)
@@ -160,17 +159,25 @@ def handle(client, mode, pcr_clients, pcr_nicknames):
                     break
         except:
             # Removing And Closing Clients
-            idx = clients.index(client)
-            clients.remove(client)
-            client.close()
-            nickname = nicknames[idx]
-            dataDict["text"] = '{}{} left!'.format('Private ' if mode == 'pcr' else '',nickname)
-            print (dataDict['text'])
-            broadcast(json.dumps(dataDict).encode(), client)
+            # global glob_clients
+            # global glob_nicknames
+            try:
+                idx = clients.index(client)
+                nickname = nicknames[idx]
             
-            nicknames.remove(nicknames[idx])
-            break
-
+                if mode == 'pcr': 
+                    pcr_nicknames = []
+                    pcr_clients = []
+                else:
+                    glob_nicknames.remove(nickname)
+                    glob_clients.remove(client)
+                dataDict["text"] = '{}{} left!'.format('Private ' if mode == 'pcr' else '',nickname)
+                dataDict["array"] = pcr_nicknames if mode == 'pcr' else glob_nicknames
+                print (dataDict['text'])
+                broadcast(json.dumps(dataDict).encode(), client)
+            finally:
+                client.close()
+                break
 
 # Receiving / Listening Function
 def receive():
@@ -217,7 +224,6 @@ def receive():
             pcr_clients.append(client)
             if len(pcr_clients) == 2:
                 broadcastCList(pcr_clients, pcr_nicknames)
-                broadcastCList(pcr_clients, pcr_nicknames)
 
                 for client_ in pcr_clients:
                     thread = threading.Thread(target = handle, args = (client_,'pcr',pcr_clients, pcr_nicknames, ))
@@ -244,6 +250,7 @@ def receive():
             # Print And Broadcast Nickname
             print("Nickname is {}".format(nickname))
 
+            dataDict["array"] = glob_nicknames
             dataDict["text"] = ">> {} joined!".format(nickname)
             broadcast(json.dumps(dataDict).encode(), client)
 

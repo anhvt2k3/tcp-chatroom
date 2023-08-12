@@ -11,7 +11,7 @@ nickname = sys.argv[1] if len(sys.argv) > 1 else input("Choose your nickname: ")
 
 # Connecting To Server
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(('192.168.0.73', 49153))
+client.connect(('192.168.0.199', 49153))
 
 PM = False
 beginChatting = True
@@ -23,21 +23,12 @@ beginChatting = True
 # Listening to Server and Sending Nickname
 def receive():
     # print ('receiving')
-    dataDict = {
-        "text" : None,
-        "array": None,
-        # 'room': '*' 
-    }
-    
+    global dataDict
     while True:
         try:
-            data = client.recv(4096)
-            dataDict = json.loads(data.decode())
-            
             if dataDict["text"] == '\\update_list':
                 global nicknames
-                nicknames = dataDict["array"]
-                print(nicknames)
+                print (nicknames)
             
 #           *** SENDING FILES *** 
             elif dataDict["text"][:5] == '\\FILE':
@@ -91,8 +82,12 @@ def receive():
                 client.close()
                 break
             else:
+                # global nicknames
+                nicknames = dataDict["array"]
                 print(dataDict["text"],)
 
+            data = client.recv(4096)
+            dataDict = json.loads(data.decode())
         # except (OSError, ConnectionResetError):
         except:
             # Close Connection When Error 
@@ -117,7 +112,7 @@ def write():
             break
 
         if (takenInput[:8] == "\\online"):
-            print(nicknames)
+            print (nicknames)
             continue
 
         if (takenInput[:4] == '\\pm ' or takenInput[:4] == '\\sf ' or takenInput[:4] == '\\pcr'):
@@ -142,16 +137,15 @@ def pcr():
     open_new_terminal(command_to_run)
 
 while True:
-    # If 'getnickname' Send Nickname``
+    # If 'getnickname' Send Nickname
     data = client.recv(4096)
     dataDict = json.loads(data.decode())
 
-    # Identify pcr
-    if len(sys.argv) > 1: 
-        dataDict['array'] = 'pcr'
 
     if dataDict["text"] == '\\get_nickname':
         dataDict["text"] = nickname
+        # Identify pcr
+        if len(sys.argv) > 1: dataDict['array'] = 'pcr'
         client.sendall(json.dumps(dataDict).encode())
 
     elif dataDict["text"] == '\\available_nickname':
@@ -164,6 +158,7 @@ while True:
         client.sendall(json.dumps(dataDict).encode())
 
     else:
+        nicknames = dataDict["array"]
         break
     
 # Starting Threads For Listening And Writing
