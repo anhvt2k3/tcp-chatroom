@@ -3,36 +3,45 @@ import threading
 import json
 import os
 import math
-import shutil
 from pathlib import Path
+import subprocess
+import sys
+
+
+host = '127.0.0.1'
+port = 55555
+BUFFER_SIZE = 4096
 
 
 
 # Choosing Nickname
-nickname = input("Choose your nickname: ")
+nickname = sys.argv[1] if len(sys.argv) > 1 else input("Choose your nickname: ")
+# if len(sys.argv) > 1: nickname = sys.argv[1]  
+# else: nickname = input("Choose your nickname: ")
+
+inPCR = False
+if (len(sys.argv) > 1): inPCR = True
+
+
 
 # Connecting To Server
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(('127.0.0.1', 55555))
+client.connect((host, port))
+
 
 RECEIVE_STATUS = True
 WRITE_STATUS = True
 
-SEPARATOR = "<SEPARATOR>"
-BUFFER_SIZE = 4096
-
-inMainRoom = True
-savedMessage = [[]]
 nicknames = []
+pcr_nicknames = []
+
 able2Write = False
 file_path = ""
 file_size = - 1
 folder = ""
 times = -1
 
-# resPCR: response for private chat room:
-# -2: normally input, -1: response for PCR, 0: not accept PCR, 1: accept PCR   
-resPCR = -2
+
 
 # Get the file_name in the file_path
 def fPath2fName(file_path):
@@ -51,7 +60,8 @@ def fPath2fName(file_path):
 def sendF_func(file_name):
     global able2Write
     global times
-    able2Write = False
+    global file_size
+    # able2Write = False
     
     # print(">> Ready to send file {}".format(file_name))
 
@@ -61,23 +71,20 @@ def sendF_func(file_name):
         for i in range(times):
             data = f.read(BUFFER_SIZE)
             client.sendall(data)
-            # print("i = {}".format(i))
 
-    # client.send("<END>".encode())
-    able2Write = True
+    # able2Write = True
     print(">> Sent file {} successfully !!!".format(file_name))
 
 def rcvF_func(dataDict):
     global able2Write
     global folder
 
-    able2Write = False
-
+    #Format: \senF <sender_name> file_name
     message = dataDict['text']
     sendNick = message[message.find(' <') + 2 : message.find('> ')]
     file_name = message[message.find('-f ') + 3 : message.find('-rcv') - 1]
     folder = "folder_" + nickname.replace(" ", "")
-    # print(folder)
+
     if not os.path.exists(folder):
         os.makedirs(folder)
     file_path = folder + '/' + file_name
@@ -87,15 +94,11 @@ def rcvF_func(dataDict):
     able2Write = False
     with open(file_path, 'wb') as f:
         times = math.ceil(int(file_size)/BUFFER_SIZE)
-        # print("times = {}".format(times))
         for i in range(times):
             data = client.recv(BUFFER_SIZE)
             f.write(data)
-            # print("i = {}".format(i))
-
-
+            
     able2Write = True
-    # print(">> File received and saved as:", file_path)
 
     # Print out 
     if ("public" in message):
@@ -103,27 +106,39 @@ def rcvF_func(dataDict):
     else:
         print ("{} (PM): sent file {}, saved as {}".format(sendNick, file_name, file_path))
 
-
 def getNickname(dataDict):
     global nicknames
     global nickname
     global able2Write
+    global folder
 
-    nicknames = dataDict['array']
-    print("Online users list: {}".format(nicknames))
-    while (nickname in nicknames):
-        print("Nickname \'{}\' is used".format(nickname))
-        nickname = input(">> Try a new nickname: ")
+    able2Write = False      
+
+    if (not inPCR):
+        nicknames = dataDict['array']
+        print("Online users list: {}".format(nicknames))
+        while (nickname in nicknames):
+            print("Nickname \'{}\' is used".format(nickname))
+            nickname = input(">> Try a new nickname: ")        
 
     dataDict['text'] = nickname
-    able2Write = True
+
+    if (inPCR): 
+        dataDict['array'] = "pcr"
+
     client.sendall(json.dumps(dataDict).encode())
+    
+    able2Write = True
+    folder = "folder_" + nickname.replace(" ", "")
+
+    print(">> Connected to server!")
+    
 
 
 def sendF_processing(takenInput):
     global file_path
     global file_size
-
+    
     dataDict = {
         'text' : None,
         'array': None
@@ -136,8 +151,39 @@ def sendF_processing(takenInput):
     file_size = os.path.getsize(file_path)
     
     dataDict['text'] = "\\sendF <{}> ({}) -f {}".format(takenInput[takenInput.find('<') + 1: takenInput.find('>')], str(file_size), fPath2fName(file_path))
-    # print(dataDict['text'])
     client.sendall(json.dumps(dataDict).encode())
+
+def sendF_func1(takenInput):
+    global able2Write
+    global file_path
+    global file_size
+    global times
+    
+    dataDict = {
+        'text' : None,
+        'array': None
+    }
+
+    if (not ('<' in takenInput)):
+        takenInput = takenInput[:7] + "<@all> " + takenInput[7:]
+    
+    file_path = takenInput[takenInput.find("> ") + 2:]
+    file_size = os.path.getsize(file_path)    
+    # able2Write = False
+
+    dataDict['text'] = "\\sendF <{}> ({}) -f {}".format(takenInput[takenInput.find('<') + 1: takenInput.find('>')], str(file_size), fPath2fName(file_path))
+    client.sendall(json.dumps(dataDict).encode())
+
+    times =  math.ceil(int(file_size)/BUFFER_SIZE)
+    # print("times = {}".format(times))
+    with open(file_path, 'rb') as f:
+        for i in range(times):
+            data = f.read(BUFFER_SIZE)
+            client.sendall(data)
+
+    # able2Write = True
+    print(">> Sent file {} successfully !!!".format(fPath2fName(file_path)))
+
 
 
 def nickCheck(checkNick, sendF = False):
@@ -152,7 +198,6 @@ def nickCheck(checkNick, sendF = False):
         return -1
     return 1
 
-
 def remove_directory(path):
     path = Path(path)
     if path.is_dir():
@@ -164,7 +209,6 @@ def remove_directory(path):
         path.rmdir()
         # print(f"Folder '{path}' and its contents removed.")
 
-
 def clear_terminal():
     # Check the operating system
     if os.name == 'posix':  # Unix-like systems
@@ -172,7 +216,18 @@ def clear_terminal():
     elif os.name == 'nt':   # Windows
         os.system('cls')
 
+def createPCR():
+    def open_new_terminal(commands):
+        commands = " & ".join(commands)
+        subprocess.run(["start", "cmd", "/c", f'{commands}'], shell = True)
 
+    command_to_run = [
+        'cd {}'.format(os.getcwd()),
+        'python test_client.py {}'.format(nickname)
+    ]
+
+    # threading.Thread(target= open_new_terminal, args=(command_to_run, )).start()
+    open_new_terminal(command_to_run)
 
 
 
@@ -193,99 +248,70 @@ def receive():
         'array': None
     }
 
-    while RECEIVE_STATUS:
+    while True:
         try:
             # Receive Message From Server
-            
-            # If 'getnickname' Send Nickname
-            data = client.recv(4096)
+            data = client.recv(BUFFER_SIZE)
             dataDict = json.loads(data.decode())
             message = dataDict['text']
 
-            if (message == '\\get_nickname'):
+
+            # If 'getnickname' Send Nickname
+            if (message == "\\get_nickname"):
                 getNickname(dataDict)
-                """ 
-                nicknames = dataDict['array']
-                print("Online users list: {}".format(nicknames))
-                while (nickname in nicknames):
-                    print("Nickname \'{}\' is used".format(nickname))
-                    nickname = input(">> Try a new nickname: ")
+                if (inPCR): 
+                    print("This is {}\'s PCR with {}".format(nickname, "..."))           
 
-                message = nickname
-                startToWrite = True
-                client.sendall(json.dumps(dataDict).encode())
-                """
-            
-            elif (message[:len("\\sendF ")] == "\\sendF "):
+            # elif (message[:len("\\join")] == "\\join"):
+            #     message = ">> \'{}\' joined!".format(message[len("\\join -n "):])
+
+            elif (message == "\\connected"):
+                message = ">> Connected to server!"
+
+            elif (message[:len("\\rcvF ")] == "\\rcvF "):
                 rcvF_func(dataDict)
-                """
-                message = message
-                sendNick = message[message.find(' <') + 2 : message.find('> ')]
-                file_name = message[message.find('-f ') + 3 : message.find('-rcv') - 1]
-                folder = "folder_" + nickname.replace(" ", "")
-                if not os.path.exists(folder):
-                    os.makedirs(folder)
-                file_path = folder + '/' + file_name
-                # print(file_path)
-                file_size = int(message[message.find(' (') + 2 : message.find(') ') ])
-                startToWrite = False
-                with open(file_path, 'wb') as f:
-                    times = math.ceil(int(file_size)/BUFFER_SIZE)
-                    # print("times = {}".format(times))
-                    for i in range(times):
-                        data = client.recv(1024)
-                        f.write(data)
-                        # print("i = {}".format(i))
-                startToWrite = True
-                # print(">> File received and saved as:", file_path)
-
-                if ("public" in message):
-                    print ("\'{}\' sent file {}, saved as {}".format(sendNick, file_name, file_path))
-                else:
-                    print ("\'{}\' (PM) sent file {}, saved as".format(sendNick, file_name, file_path))
-                """
 
             elif (message[:len("\\ready ")] == "\\ready "):
                 tmp = message
                 file_name = tmp[tmp.find('-f ') + 3:]
                 sendF_func(file_name)
 
-            elif (message[:len("\\pChat ")] == "\\pChat "):
-                if (message[:len("\\pChat join? ")] == "\\pChat join? "):
-                    sname = message[message.find('-s ') + 3:]
-                    print("{} invites you to a Private chat room (Y/n): ".format(sname))
-                    continue
-                    # resPCR = -1
-                    # while(resPCR != 0 and resPCR != 1):
-                    #     pass
-                    # ans = resPCR
-                    # # resPCR = -2
-                    # print("ans = {}".format(ans))
-                    # if (ans == 1): dataDict['text'] = "Yes"
-                    # else: dataDict['text'] = "No"
-
-                    # client.sendall(json.dumps(dataDict).encode())
-                # elif (message[:len("\pChat -begin ")] == "\pChat -begin "):
-                #     chatter = message[len("\pChat -begin "):]
-                #     pass          
+            elif (message[:len("\\invoke_pcr ")] == "\\invoke_pcr "):
+                name = message[message.find('-n ') + 3:]
+                print(">> You will join private chat room with {}".format(name))
+                createPCR()
 
             elif (message == '\\update_list'):
                 nicknames = dataDict['array']
                 
             elif (message == "\\close_all"):
                 print(">> You left the chat!")
-                client.close()
+                
                 WRITE_STATUS = False
 
-                folder = "folder_" + nickname.replace(" ", "")
-                remove_directory(folder)
+                # print("folder = {}".format(folder))
+                if (not inPCR):
+                    folder = "folder_" + nickname.replace(" ", "")
+                    remove_directory(folder)
 
+                client.close()
                 break
 
             elif (message[:len("\\getOut ")] == "\\getOut "):
                 nicknames = dataDict['array']
                 tmp_nick = message[message.find("-n ") + 3:]
                 print(">> {} left the chat!".format(tmp_nick))   
+
+            elif (message == "\\quit"):
+                WRITE_STATUS = False
+                dataDict['text'] = "\\hError"
+                client.sendall(json.dumps(dataDict).encode())
+
+                print(">> You left the chat!")
+                WRITE_STATUS = False
+                if (not inPCR):
+                    folder = "folder_" + nickname.replace(" ", "")
+                    remove_directory(folder)
 
             else:
                 print(message)
@@ -296,9 +322,12 @@ def receive():
 
             dataDict['text'] = "\\hError"
             client.sendall(json.dumps(dataDict).encode())
+            
+            print(">> You left the chat!")
             WRITE_STATUS = False
-            folder = "folder_" + nickname.replace(" ", "")
-            remove_directory(folder)
+            if (not inPCR):
+                folder = "folder_" + nickname.replace(" ", "")
+                remove_directory(folder)
             
             client.close()
             break
@@ -316,6 +345,8 @@ def write():
     global resPCR
     global inMainRoom
     
+    okMess = True
+
     dataDict = {
         'text' : None,
         'array': None
@@ -334,65 +365,63 @@ def write():
 
         # To pm:  "\pm <recv's name>  message"
         elif (takenInput[:len("\\pm ")] == "\\pm "):
-            checkNick = takenInput[takenInput.find(' <') + 2: takenInput.find('> ')]
-            checkVar = nickCheck(checkNick)
-            if checkVar == 1:
-                dataDict['text'] = takenInput
-            elif checkVar == -1:
-                print(">> {} is not existed!".format(checkNick))
+            if (inPCR):
+                print(">> Cannot use private message in PCR")
                 continue
             else:
-                # print(">> Cannot private chat with yourself!")
-                continue
+                checkNick = takenInput[takenInput.find(' <') + 2: takenInput.find('> ')]
+                checkVar = nickCheck(checkNick)
+                if checkVar == 1:
+                    dataDict['text'] = takenInput
+                elif checkVar == -1:
+                    print(">> {} is not existed!".format(checkNick))
+                    continue
+                else:
+                    print(">> Cannot private chat with yourself!")
+                    continue
 
         # To send file "\sendF <@all> file's path"
         elif (takenInput[:len("\\sendF ")] == "\\sendF "):    
             if ('<' in takenInput):
                 checkNick = takenInput[takenInput.find(' <') + 2: takenInput.find('> ')]
                 checkVar = nickCheck(checkNick)
-            else: checkVar = 1 
+            else: checkVar = 1
             
             if (checkVar == 1):
-                sendF_processing(takenInput)
+                # sendF_processing(takenInput)
+                sendF_func1(takenInput)
+                # sendF_func(file_name)
                 continue
             elif (checkVar == -1):
                 print(">> {} is not existed!".format(checkNick))
                 continue
             else:
                 # print(">> Cannot private chat with yourself!")
-                continue
-
-            
+                continue      
         
         # To invite user to private chat room "\pChat <name>"
-        elif (takenInput[:len("\\pChat ")] == "\\pChat "):
-            if (takenInput[:len("\\pChat <")] == "\\pChat <"):
+        elif (takenInput[:len("\\pcr <")] == "\\pcr <"):
+            if (inPCR):
+                print(">> Please creare new PCR in Main chat!")
+                continue
+            else:
                 checkNick = takenInput[takenInput.find(' <') + 2: takenInput.find('> ')]
                 checkVar = nickCheck(checkNick)
-                # print("\'{}\': {}".format(checkNick, checkVar))
                 if (checkVar == 1):
-                    dataDict['text'] = "\\pChat -s {} -r {}".format(nickname, checkNick)
-                    # private chat -sender ... -receiver ...
+                    dataDict['text'] = "\\pcr -s {} -r {}".format(nickname, checkNick)
                 elif (checkVar == -1):
                     print(">> {} is not existed!".format(checkNick))
                     continue
                 else:
-                    print(">> Cannot do private chat yourself!")
-                    continue
-            elif (takenInput[:len("\\pChat ")] == "\\pChat "):
-                dataDict['text'] = takenInput[len("\\pChat "):]
-        
-        # To response to the private chatroom "\pChat Yes/No"
-        # elif (takenInput[:len("\\pChat ")] == "\\pChat "):
-        #     dataDict['text'] = takenInput[len("\\pChat "):]
-        # if (takenInput == "bye!"):
-        #     dataDict['text'] = "\\bye -n {}".format(nickname)
+                    print(">> Cannot make a PCR yourself!")
+                    continue  
 
-        # if it is normal text
         else:
             dataDict['text'] = '{}: {}'.format(nickname, takenInput)
 
-        if WRITE_STATUS:
+
+        
+        if (WRITE_STATUS and okMess):
             client.sendall(json.dumps(dataDict).encode())
         
         if (takenInput == "bye!"):

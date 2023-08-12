@@ -9,7 +9,9 @@ import math
 host = '127.0.0.1'
 port = 55555
 
+
 BUFFER_SIZE = 4096
+SERVER_FOLDER = "folder_server"
 
 # Starting Server
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -21,27 +23,37 @@ clients = []
 nicknames = []
 addresses = []
 
-SERVER_FOLDER = "folder_server"
-
-nickname = ''
-times = -1
 
 # Sending Messages To All Connected Clients
-def broadcast(message, sender):
-    for client in clients:
-        if client != sender:
+# def broadcast(message, sender, list = ""):
+#     global clients
+#     if list == "": 
+#         list = clients
+
+#     for rcver in list:
+#         if rcver != sender:
+#             rcver.sendall(message)
+
+def broadcast(message, sender, rcvers):
+    for rcver in rcvers:
+        if rcver != sender:
+            rcver.sendall(message)
+
+def broadcastAll(message, clientList):
+    for client in clientList:
             client.sendall(message)
 
-def broadcastAll(message):
-    for client in clients:
-            client.sendall(message)
+def broadcastCList(rcvers, nicknameList):
+    dataDict = {
+        'text': None,
+        'array': None
+    }
 
-def broadcastCList():
-    dataDict = {}
     dataDict['text'] = '\\update_list'
-    dataDict['array'] = nicknames
-    for client in clients:
-            client.sendall(json.dumps(dataDict).encode())
+    dataDict['array'] = nicknameList
+
+    for rcver in rcvers:
+            rcver.sendall(json.dumps(dataDict).encode())
 
 def targetSend(message, rname):
     i = nicknames.index(rname)
@@ -60,36 +72,46 @@ def targetReceive(rname):
     dataDict = json.loads(data.decode())
     return dataDict
 
+def checkParent(pcr_client, pcr_clientList, pcr_nickList, nickList):
+    idx = pcr_clientList.index(pcr_client)
+    name = pcr_nickList[idx]
+    if (name in nickList):
+        return True
+    else: return False
+
+    pass
 
 
 # Send folder to Client
-def sendF2C(file_path, file_name, sender, pm = False, rcvNick = ""):
+def sendF2C(file_path, file_name, sender, clientList, nickList, pm = False, rcvNick = ""):
+    global clients
+
     dataDict = {
         'text' : None,
         'array': None
     }
 
     # print("\'{}\' _ \'{}\' _ {}".format(file_path, file_name, sender))
-    idx = clients.index(sender)
-    sendNick = nicknames[idx]
+    idx = clientList.index(sender)
+    sendNick = nickList[idx]
 
     if (not pm):
         file_size = os.path.getsize(file_path)
-        dataDict['text'] = "\sendF <{}> ({}) -f {} -rcv public".format(sendNick, file_size, file_name)
-        broadcast(json.dumps(dataDict).encode(), sender)
+        dataDict['text'] = "\\rcvF <{}> ({}) -f {} -rcv public".format(sendNick, file_size, file_name)
+        broadcast(json.dumps(dataDict).encode(), sender, clientList)
 
         with open(file_path, 'rb') as f:
             for i in range(times):
                 data = f.read(BUFFER_SIZE)
-                broadcast(data, sender)
+                broadcast(data, sender, clientList)
                 # print("i = {}".format(i))
 
     else:
-        idx = nicknames.index(rcvNick)
-        rcver = clients[idx]
+        idx = nickList.index(rcvNick)
+        rcver = clientList[idx]
         
         file_size = os.path.getsize(file_path)
-        dataDict['text'] = "\sendF <{}> ({}) -f {} -rcv".format(sendNick, file_size, file_name)
+        dataDict['text'] = "\\rcvF <{}> ({}) -f {} -rcv".format(sendNick, file_size, file_name)
         rcver.sendall(json.dumps(dataDict).encode())  
                   
         with open(file_path, 'rb') as f:              
@@ -121,7 +143,7 @@ def createDir(file_name):
 def cleanServerFolder(file_path, file_name):
     if os.path.exists(file_path):
         os.remove(file_path)
-        print(">> File \'{}\' deleted.".format(file_name))
+        # print(">> File \'{}\' deleted.".format(file_name))
     else:
         print(">> File \'{}\' not found.".format(file_name))
 
@@ -129,10 +151,11 @@ def cleanServerFolder(file_path, file_name):
 
 
 # Handling Messages From Clients
-def handle(client):
+def handle(client, clientList, nickList, pcr = False):
     global times
     global nicknames
-
+    global clients
+    
     dataDict = {
         'text' : None,
         'array': None
@@ -140,128 +163,82 @@ def handle(client):
     
     while True:
         try:
-            data = client.recv(BUFFER_SIZE)
-            dataDict = json.loads(data.decode())
-            idx = clients.index(client)
-            message = dataDict['text']
-
+            if (not pcr):
+                # print("5")
+                data = client.recv(BUFFER_SIZE)
+                dataDict = json.loads(data.decode())
+                message = dataDict['text']
+                idx = clients.index(client)
+                
+            else:
+                data = client.recv(BUFFER_SIZE)
+                dataDict = json.loads(data.decode())
+                message = dataDict['text']
+                idx = clientList.index(client)
+                
+                if (not checkParent(client, clientList, nickList, nicknames)):
+                    dataDict['text'] = '\\quit'
+                    client.sendall(json.dumps(dataDict).encode())
+                
+                
             # Private chat handle
             if (message[:len("\\pm ")] == "\\pm "):
                 rcvNick = message[message.find('<') + 1 : message.find('>')]
-                if not (rcvNick in nicknames):
-                    dataDict['text'] = ">> \'{}\' is not existed!".format(rcvNick)
-                    client.sendall(json.dumps(dataDict).encode())
-                elif (rcvNick == nicknames[idx]):
-                    dataDict['text'] = "Cannot send message to yourself"
-                    client.sendall(json.dumps(dataDict).encode())
-                else:
-                    dataDict['text'] = "{} (PM): ".format(nicknames[idx]) + message[message.find('> ') + 2:]
-                    idx = nicknames.index(rcvNick)
-                    rcver = clients[idx]
-                    rcver.sendall(json.dumps(dataDict).encode())
+                dataDict['text'] = "{} (PM): ".format(nicknames[idx]) + message[message.find('> ') + 2:]
+                idx = nicknames.index(rcvNick)
+                rcver = clients[idx]
+                rcver.sendall(json.dumps(dataDict).encode())
             
             elif (message[:len("\\sendF ")] == "\\sendF "):
-                print("get sendF successfully")
+                print("Get sendF successfully")
                 file_name = message[message.find('-f ') + 3:]
-                
+                file_path = createDir(file_name)
+                file_size = message[message.find(' (') + 2: message.find(') ')]
                 print(file_name)
                 
-                file_path = createDir(file_name)
-
-                file_size = message[message.find(' (') + 2: message.find(') ')]
-                # print(file_size)
-
-                dataDict['text'] = '\\ready -f {}'.format(file_name)
-                client.sendall(json.dumps(dataDict).encode())
-
-                # recvFfromC(file_size, file_path, client)
                 print("Ready to receive ...")
                 times =  math.ceil(int(file_size)/BUFFER_SIZE)
-                # print("times = {}".format(times))
                 with open(file_path, 'wb') as f:                    
                     for i in range(times):
                         data = client.recv(BUFFER_SIZE)
                         f.write(data)
-                        # print("i = {}".format(i))
 
                 if message[:14] == "\\sendF <@all> ":
-                    sendF2C(file_path, file_name, client)
+                    sendF2C(file_path, file_name, client, clientList, nickList, False, "")
                 else:
                     rcvNick = message[message.find('<') + 1 : message.find('>')]
-                    sendF2C(file_path, file_name, client, True, rcvNick)
+                    sendF2C(file_path, file_name, client, clientList, nickList, True, rcvNick)
 
                 # Delete temporary file in folder_server
                 cleanServerFolder(file_path, file_name)
-                """
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                    print(">> File \'{}\' deleted.".format(file_name))
-                else:
-                    print(">> File \'{}\' not found.".format(file_name))
-                """
 
-            elif (message[:len("\\pChat ")] == "\\pChat "):
-                if (message[:len("\\pChat -s")] == "\\pChat -s"):
+            elif (message[:len("\\pcr ")] == "\\pcr "):
+                if (message[:len("\\pcr -s")] == "\\pcr -s"):
                     sname = message[message.find("-s ") + 3: message.find(" -r")]
                     rname = message[message.find("-r ") + 3:]
-
-                    sidx = nicknames.index(sname)
-                    ridx = nicknames.index(rname)
-                    sender = clients[sidx]
-                    rcver = clients[ridx]
-
-                    print("-s {} -r {}".format(sname, rname))
                     
-                    dataDict['text'] = "\\pChat join? -s {}".format(sname)
+                    sender = client
+                    ridx = nicknames.index(rname)
+                    rcver = clients[ridx]
+                    
+                    dataDict['text'] = "\\invoke_pcr -n {}".format(sname)
                     rcver.sendall(json.dumps(dataDict).encode())
                     
-
-                    data = rcver.recv(BUFFER_SIZE)
-                    dataDict = json.loads(data.decode())
-                    message = dataDict['text']
-
-                    if (message == "Y"):
-                        dataDict['text'] = "\pChat -begin {}".format(sname)
-                        rcver.sendall(json.dumps(dataDict).encode())
-
-                        dataDict['text'] = "\pChat -begin {}".format(rname)
-                        rcver.sendall(json.dumps(dataDict).encode())
-
-
-                    else:
-                        dataDict['text'] = "{} do not want to have private chat with you :((".format(rcver)
-                        client(json.dumps(dataDict).encode())
+                    dataDict['text'] = "\\invoke_pcr -n {}".format(rname)
+                    sender.sendall(json.dumps(dataDict).encode())        
 
             elif (message == "\\hError"):
-                idx = clients.index(client)
-                nickname = nicknames[idx]
-                address = addresses[idx]
+                if (not pcr):
+                    if (client in clients):
+                        idx = clients.index(client)
+                        clients.remove(client)
+                        nickname = nicknames[idx]
+                        address = addresses[idx]
 
-                addresses.remove(address)
-                clients.remove(client)
-                nicknames.remove(nickname)
+                        nicknames.remove(nickname)
+                        addresses.remove(address)
 
-                dataDict['text'] = '\\close_all'
-                client.close()
-                print("Disconnected with \'{}\': {}".format(nickname, address))
-
-                dataDict['text'] = '\\getOut -n {}'.format(nickname)
-                dataDict['array'] = nicknames
-                broadcast(json.dumps(dataDict).encode(), client)
-
-            else:
-                # Broadcasting Messages
-                broadcast(json.dumps(dataDict).encode(), client)
-                
-                # Out room handle
-                if (dataDict['text'] == nicknames[idx] + ': bye!'):
-                    clients.remove(client)
-                    nickname = nicknames[idx]
-                    nicknames.remove(nickname)
-                    address = addresses[idx]
-                    addresses.remove(address)
-
-                    print("Disconnected with \'{}\': {}".format(nickname, address))
+                        print("Disconnected with \'{}\': {}".format(nickname, address))
 
                     dataDict['text'] = '\\close_all'
                     client.sendall(json.dumps(dataDict).encode())
@@ -269,28 +246,73 @@ def handle(client):
 
                     dataDict['text'] = '\\getOut -n {}'.format(nickname)
                     dataDict['array'] = nicknames
-                    broadcast(json.dumps(dataDict).encode(), client)
-                    
+                    broadcast(json.dumps(dataDict).encode(), client, clients)
+
+                else:
+                    dataDict['text'] = '\\close_all'
+                    client.sendall(json.dumps(dataDict).encode())
+                    client.close()
+                break
+
+            else:
+                # Broadcasting Messages
+                if (not pcr):
+                    broadcast(json.dumps(dataDict).encode(), client, clients)
+                else:
+                    broadcast(json.dumps(dataDict).encode(), client, clientList)
+
+
+                # Out room handle
+                if (dataDict['text'] == nicknames[idx] + ': bye!'):
+                    if (not pcr):
+                        if (client in clients):
+                            idx = clients.index(client)
+                            clients.remove(client)
+                            nickname = nicknames[idx]
+                            address = addresses[idx]
+
+                        nicknames.remove(nickname)
+                        addresses.remove(address)
+
+                        print("Disconnected with \'{}\': {}".format(nickname, address))
+
+                        dataDict['text'] = '\\close_all'
+                        client.sendall(json.dumps(dataDict).encode())
+                        client.close()
+
+                        dataDict['text'] = '\\getOut -n {}'.format(nickname)
+                        dataDict['array'] = nicknames
+                        broadcast(json.dumps(dataDict).encode(), client, clients)
+
+                    else:
+                        dataDict['text'] = '\\close_all'
+                        client.sendall(json.dumps(dataDict).encode())
+                        client.close()
                     break
         
         except:
             # Removing And Closing Clients
-            idx = clients.index(client)
-            nickname = nicknames[idx]
-            address = addresses[idx]
+            if (not pcr):
+                if (client in clients):
+                    idx = clients.index(client)
+                    nickname = nicknames[idx]
+                    address = addresses[idx]
+                    
+                    clients.remove(client)
+                    addresses.remove(address)
+                    nicknames.remove(nickname)
 
-            addresses.remove(address)
-            clients.remove(client)
-            nicknames.remove(nickname)
+                    print("Disconnected with \'{}\': {}".format(nickname, address))
 
-            print("Disconnected with \'{}\': {}".format(nickname, address))
-
-            client.close()            
-            
-            dataDict['text'] = '\\getOut -n {}'.format(nickname)
-            dataDict['array'] = nicknames
-            broadcast(json.dumps(dataDict).encode(), client)
-
+                client.close()            
+                
+                dataDict['text'] = '\\getOut -n {}'.format(nickname)
+                dataDict['array'] = nicknames
+                broadcast(json.dumps(dataDict).encode(), client, clients)
+            else:
+                dataDict['text'] = '\\close_all'
+                client.sendall(json.dumps(dataDict).encode())
+                client.close()
             break
 
 
@@ -301,56 +323,61 @@ def receive():
         'text' : None,
         'array': None
     }
-
+    global clients
+    global nicknames
+    pcr_nicknames = []
+    pcr_clients = []
 
     while True:
-        # Accept Connection
+        # Accept connection
         client, address = server.accept()
-        print("Connected with {}".format(str(address)))
         
-        # Request And Store Nickname
+        
+        # Request and store nickname
         dataDict['text'] = '\\get_nickname'
         dataDict['array'] = nicknames
         client.sendall(json.dumps(dataDict).encode())
 
+        
 
-        # Receive nick name from client
-        data = client.recv(4096)
+        # Receive nickname from client
+        data = client.recv(BUFFER_SIZE)
         dataDict = json.loads(data.decode())
         nickname = dataDict['text']
 
-        nicknames.append(nickname)
-        clients.append(client)
-        addresses.append(address)
+        if (dataDict['array'] != 'pcr'):
 
-        # Print And Broadcast Nickname
-        print("New member: \'{}\'".format(nickname))
+            print("Connected with {}".format(str(address)))
 
-        dataDict['text'] = ">> {} joined!".format(nickname)
-        broadcast(json.dumps(dataDict).encode(), client)
+            nicknames.append(nickname)
+            clients.append(client)
+            addresses.append(address)
 
-        broadcastCList()
+            # Print and Broadcast Nickname
+            print("\'{}\' joined".format(nickname))
 
-        dataDict['text'] = '>> Connected to server!'
-        client.sendall(json.dumps(dataDict).encode())
+            dataDict['text'] = ">> {} joined!".format(nickname)
+            broadcast(json.dumps(dataDict).encode(), client, clients)
+            broadcastCList(clients,nicknames)
 
-        # Start Handling Thread For Client
-        thread = threading.Thread(target = handle, args = (client,))
-        thread.start()
+            # Start Handling Thread For Client
+            thread = threading.Thread(target = handle, args = (client, clients, nicknames, False,))
+            thread.start()
 
+        else:
+            pcr_nicknames.append(nickname)
+            pcr_clients.append(client)
 
-def write():
-    global server
-    while True:
-        inp = input("")
-        if (inp == "\shutdown"):
-            print("Server is shutting down...")
-            server.close()
+            if (len(pcr_clients) >= 2):
+                broadcastCList(pcr_clients[:2], pcr_nicknames[:2])
+                for pcr_client in pcr_clients[:2]:
+                    thread = threading.Thread(target = handle, args = (pcr_client, pcr_clients[:2], pcr_nicknames[:2], True,))
+                    thread.start()
+
+                pcr_nicknames = pcr_nicknames[2:]
+                pcr_clients = pcr_clients[2:]
 
 
 print("Server is listening ...")
-
-# write_thread = threading.Thread(target = write)
-# write_thread.start()
 
 receive()
