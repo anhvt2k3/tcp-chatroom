@@ -1,7 +1,6 @@
 import socket
 import threading
 import json
-import tqdm
 import os
 import math
 
@@ -9,7 +8,7 @@ import math
 host = '127.0.0.1'
 port = 55555
 
-
+# Default
 BUFFER_SIZE = 4096
 SERVER_FOLDER = "folder_server"
 
@@ -25,15 +24,6 @@ addresses = []
 
 
 # Sending Messages To All Connected Clients
-# def broadcast(message, sender, list = ""):
-#     global clients
-#     if list == "": 
-#         list = clients
-
-#     for rcver in list:
-#         if rcver != sender:
-#             rcver.sendall(message)
-
 def broadcast(message, sender, rcvers):
     for rcver in rcvers:
         if rcver != sender:
@@ -54,23 +44,6 @@ def broadcastCList(rcvers, nicknameList):
 
     for rcver in rcvers:
             rcver.sendall(json.dumps(dataDict).encode())
-
-def targetSend(message, rname):
-    i = nicknames.index(rname)
-    rcver = clients[i]
-    rcver.sendall(message)
-    
-def targetReceive(rname):
-    dataDict = {
-        'text' : None,
-        'array': None
-    }
-
-    i = nicknames.index(rname)
-    rcver = clients[i]
-    data = rcver.recv(BUFFER_SIZE)
-    dataDict = json.loads(data.decode())
-    return dataDict
 
 def checkParent(pcr_client, pcr_clientList, pcr_nickList, nickList):
     idx = pcr_clientList.index(pcr_client)
@@ -132,13 +105,11 @@ def recvFfromC(file_size, file_path, client):
             f.write(data)
             # print("i = {}".format(i))
 
-
 def createDir(file_name):
     folder = SERVER_FOLDER
     if not os.path.exists(folder):
         os.makedirs(folder)
     return folder + '/' + file_name
-    
 
 def cleanServerFolder(file_path, file_name):
     if os.path.exists(file_path):
@@ -176,7 +147,6 @@ def handle(client, clientList, nickList, pcr = False):
     while True:
         try:
             if (not pcr):
-                # print("5")
                 data = client.recv(BUFFER_SIZE)
                 dataDict = json.loads(data.decode())
                 message = dataDict['text']
@@ -201,9 +171,9 @@ def handle(client, clientList, nickList, pcr = False):
                 file_name = message[message.find('-f ') + 3:]
                 file_path = createDir(file_name)
                 file_size = message[message.find(' (') + 2: message.find(') ')]
-                print(file_name)
+                # print(file_name)
                 
-                print("Ready to receive ...")
+                # print("Ready to receive ...")
                 times =  math.ceil(int(file_size)/BUFFER_SIZE)
                 with open(file_path, 'wb') as f:                    
                     for i in range(times):
@@ -281,6 +251,15 @@ def handle(client, clientList, nickList, pcr = False):
                         clientList.remove(clientList[-i + 1])
                         nickList.remove(nickList[-i + 1])
 
+            elif (message == "\\parentCheck"):
+                tmp = dataDict['array']
+
+                dataDict['array'] = "False"
+                if (tmp in nicknames):
+                    dataDict['array'] = "True"
+
+                client.sendall(json.dumps(dataDict).encode())
+
             else:
                 # Broadcasting Messages
                 if (not pcr):
@@ -291,11 +270,10 @@ def handle(client, clientList, nickList, pcr = False):
 
                 # Out room handle
                 if (not pcr and dataDict['text'] == nicknames[idx] + ": bye!"):
-                    if (client in clients):
-                        idx = clients.index(client)
-                        clients.remove(client)
-                        nickname = nicknames[idx]
-                        address = addresses[idx]
+                    idx = clients.index(client)
+                    clients.remove(client)
+                    nickname = nicknames[idx]
+                    address = addresses[idx]
 
                     nicknames.remove(nickname)
                     addresses.remove(address)
@@ -309,10 +287,9 @@ def handle(client, clientList, nickList, pcr = False):
                     dataDict['text'] = "\\close_all"
                     client.sendall(json.dumps(dataDict).encode())
 
-                    data = client.recv(BUFFER_SIZE)
-                    dataDict = json.loads(data.decode())
-                    pcr_clients = dataDict['array']
-
+                    # data = client.recv(BUFFER_SIZE)
+                    # dataDict = json.loads(data.decode())
+                    # pcr_clients = dataDict['array']
                     # for str in pcr_clients:
                     #     i = getChildIdx(str, clientList)
                     #     child = clientList[i]
