@@ -9,10 +9,10 @@ import sys
 
 # Connection Data
 host = sys.argv[1]
-port = sys.argv[2]
+port = int(sys.argv[2])
 
-host = sys.argv[1] if len(sys.argv) > 1 else '127.0.0.1'
-port = sys.argv[2] if len(sys.argv) > 2 else 55555
+host = sys.argv[1]
+port = int(sys.argv[2]) if len(sys.argv) > 2 else 55555
 
 #default
 BUFFER_SIZE = 4096
@@ -27,7 +27,7 @@ inPCR = False
 pcr_nickname = ""
 if (len(sys.argv) > 3): 
     inPCR = True
-    pcr_nickname = sys.argv[2]
+    pcr_nickname = sys.argv[4]
 
 
 # Connecting To Server
