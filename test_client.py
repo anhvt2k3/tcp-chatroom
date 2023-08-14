@@ -8,8 +8,8 @@ import subprocess
 import sys
 
 # Connection Data
-host = '127.0.0.1'
-port = 55555
+host = sys.argv[1]
+port = sys.argv[2]
 
 #default
 BUFFER_SIZE = 4096
@@ -17,12 +17,12 @@ BUFFER_SIZE = 4096
 
 
 # Input Nickname
-nickname = sys.argv[1] if len(sys.argv) > 1 else input("Choose your nickname: ")
+nickname = sys.argv[3] if len(sys.argv) > 3 else input("Choose your nickname: ")
 
 # 4 private chat room
 inPCR = False
 pcr_nickname = ""
-if (len(sys.argv) > 1): 
+if (len(sys.argv) > 3): 
     inPCR = True
     pcr_nickname = sys.argv[2]
 
