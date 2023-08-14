@@ -40,6 +40,9 @@ FIRST_RUN = True
 nicknames = []
 pcr_clients = []
 able2Write = False
+mtx = True
+
+
 file_path = ""
 file_size = - 1
 folder = ""
@@ -83,7 +86,9 @@ def rcvF_func(dataDict):
         for i in range(times):
             data = client.recv(BUFFER_SIZE)
             f.write(data)
-            
+    
+    f.close()
+
     able2Write = True
 
     # Print out 
@@ -118,6 +123,8 @@ def sendF_func(takenInput):
         for i in range(times):
             data = f.read(BUFFER_SIZE)
             client.sendall(data)
+
+    f.close()
 
     able2Write = True
     print(">> Sent file {} successfully !!!".format(path2Name(file_path)))
@@ -218,6 +225,7 @@ def receive():
     global WRITE_STATUS
     global PARENT_STATUS
     global able2Write
+    global mtx
 
     global nicknames
     global nickname
@@ -248,6 +256,9 @@ def receive():
 
             elif (message == "\\connected"):
                 message = ">> Connected to server!"
+
+            elif (message == "\\doneRecevingFile"):
+                mtx = True
 
             elif (message[:len("\\rcvF ")] == "\\rcvF "):
                 rcvF_func(dataDict)
@@ -338,6 +349,7 @@ def write():
     global PARENT_STATUS
     global FIRST_RUN
     global able2Write
+    global mtx
 
     global file_path
     global file_size
@@ -354,19 +366,19 @@ def write():
 
     while WRITE_STATUS:
 
-        able2Write = False
+        # able2Write = False
 
         if (not FIRST_RUN and inPCR):
+            while (not mtx): pass
             parentCheck()
-        
+
         if (not FIRST_RUN and not inPCR):
             able2Write = True
 
-        
 
         while (not able2Write): pass
         FIRST_RUN = False
-
+        
         if (inPCR): 
             if (not PARENT_STATUS):
                 dataDict['text'] = "\\hError"
@@ -413,6 +425,7 @@ def write():
                 check = checkDir(path)
 
                 if (check == 1):
+                    mtx = False
                     sendF_func(takenInput)
                 elif (check == 0):
                     print("!ERROR: Cannot send a folder")

@@ -95,6 +95,8 @@ def sendF2C(file_path, file_name, sender, clientList, nickList, pm = False, rcvN
                 data = f.read(BUFFER_SIZE)
                 rcver.sendall(data)
 
+
+    f.close()
     print("Done transfering file {}".format(file_name))
 
 # Receive folder from Client
@@ -182,6 +184,11 @@ def handle(client, clientList, nickList, pcr = False):
                     for i in range(times):
                         data = client.recv(BUFFER_SIZE)
                         f.write(data)
+                f.close()
+
+                dataDict['text'] = "\\doneRecevingFile"
+                client.sendall(json.dumps(dataDict).encode())
+
 
                 if message[:14] == "\\sendF <@all> ":
                     sendF2C(file_path, file_name, client, clientList, nickList, False, "")
