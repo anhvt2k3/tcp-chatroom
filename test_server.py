@@ -12,7 +12,7 @@ port = int(sys.argv[2]) if len(sys.argv) > 2 else 55555
 
 
 # Default
-BUFFER_SIZE = 2048
+BUFFER_SIZE = 4096
 SERVER_FOLDER = "folder_server"
 
 # Starting Server

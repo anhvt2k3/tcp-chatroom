@@ -12,7 +12,7 @@ host = sys.argv[1] if len(sys.argv) > 2 else '127.0.0.1'
 port = int(sys.argv[2]) if len(sys.argv) > 2 else 55555
 
 #default
-BUFFER_SIZE = 2048
+BUFFER_SIZE = 4096
 
 
 
@@ -80,7 +80,6 @@ def rcvF_func(dataDict):
     file_size = int(message[message.find(' (') + 2 : message.find(') ') ])
 
     CHUNK_SIZE = int(dataDict["array"])
-    print (CHUNK_SIZE)
     able2Write = False
     # with open(file_path, 'wb') as f:
     #     times = math.ceil(int(file_size)/BUFFER_SIZE)
@@ -137,9 +136,6 @@ def sendF_func(takenInput):
         CHUNK_SIZE = CHUNK_SIZE + 1
     dataDict["array"] = CHUNK_SIZE
     client.sendall(json.dumps(dataDict).encode())
-    print (file_size)
-    print (CHUNK_SIZE)
-    print (file_size % CHUNK_SIZE)
     # times =  math.ceil(int(file_size)/BUFFER_SIZE)
     # with open(file_path, 'rb') as f:
     #     for i in range(times):
@@ -157,7 +153,6 @@ def sendF_func(takenInput):
     # f.close()
 
     able2Write = True
-    print(">> Sent file {} successfully !!!".format(path2Name(file_path)))
 
 def getNickname(dataDict):
     global nicknames
