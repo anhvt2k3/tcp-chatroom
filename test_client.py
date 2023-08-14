@@ -8,7 +8,6 @@ import subprocess
 import sys
 
 # Connection Data
-
 host = sys.argv[1]
 port = int(sys.argv[2]) if len(sys.argv) > 2 else 55555
 
