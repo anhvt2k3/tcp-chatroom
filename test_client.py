@@ -81,12 +81,26 @@ def rcvF_func(dataDict):
 
 
     able2Write = False
-    with open(file_path, 'wb') as f:
-        times = math.ceil(int(file_size)/BUFFER_SIZE)
-        for i in range(times):
-            data = client.recv(BUFFER_SIZE)
-            f.write(data)
-    
+    # with open(file_path, 'wb') as f:
+    #     times = math.ceil(int(file_size)/BUFFER_SIZE)
+    #     for i in range(times):
+    #         data = client.recv(BUFFER_SIZE)
+    #         f.write(data)
+
+
+
+    file = open(file_path, "wb")
+    while True:
+        chunk = client.recv(4096)
+        try:
+            json.loads(chunk.decode())
+            break
+        except:
+            file.write(chunk)
+            continue            
+    print ('>> File {} received!')
+    file.close()
+
     # f.close()
 
     able2Write = True
@@ -118,11 +132,19 @@ def sendF_func(takenInput):
     dataDict['text'] = "\\sendF <{}> ({}) -f {}".format(takenInput[takenInput.find('<') + 1: takenInput.find('>')], str(file_size), path2Name(file_path))
     client.sendall(json.dumps(dataDict).encode())
 
-    times =  math.ceil(int(file_size)/BUFFER_SIZE)
-    with open(file_path, 'rb') as f:
-        for i in range(times):
-            data = f.read(BUFFER_SIZE)
-            client.sendall(data)
+    # times =  math.ceil(int(file_size)/BUFFER_SIZE)
+    # with open(file_path, 'rb') as f:
+    #     for i in range(times):
+    #         data = f.read(BUFFER_SIZE)
+    #         client.sendall(data)
+
+
+    file = open(f'./{file_path}', "rb")
+    client.sendall(file.read())
+    client.sendall(json.dumps(dataDict).encode())
+    print ('>> File {} sent!'.format(file_path))
+    file.close()
+
 
     # f.close()
 
@@ -241,7 +263,7 @@ def receive():
 
 
     while True:
-        try:
+        # try:
             # Receive Message From Server
             data = client.recv(BUFFER_SIZE)
             dataDict = json.loads(data.decode())
@@ -326,20 +348,20 @@ def receive():
             else:
                 print(message)
             
-        except:
-            print("An error occured!")
+        # except:
+        #     print("An error occured!")
 
-            dataDict['text'] = "\\hError"
-            client.sendall(json.dumps(dataDict).encode())
+        #     dataDict['text'] = "\\hError"
+        #     client.sendall(json.dumps(dataDict).encode())
             
-            print(">> You left the chat!2.1")
-            WRITE_STATUS = False
-            if (not inPCR):
-                folder = "folder_" + nickname.replace(" ", "")
-                removeDir(folder)
+        #     print(">> You left the chat!2.1")
+        #     WRITE_STATUS = False
+        #     if (not inPCR):
+        #         folder = "folder_" + nickname.replace(" ", "")
+        #         removeDir(folder)
             
-            client.close()
-            break
+        #     client.close()
+        #     break
 
 
 # Sending Messages To Server
