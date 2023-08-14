@@ -12,7 +12,7 @@ port = int(sys.argv[2]) if len(sys.argv) > 2 else 55555
 
 
 # Default
-BUFFER_SIZE = 4096
+BUFFER_SIZE = 2048
 SERVER_FOLDER = "folder_server"
 
 # Starting Server
@@ -38,8 +38,8 @@ def broadcastAll(message, clientList):
 
 def broadcastCList(rcvers, nicknameList):
     dataDict = {
-        'text': None,
-        'array': None
+        'text': '',
+        'array': ''
     }
 
     dataDict['text'] = '\\update_list'
@@ -59,12 +59,12 @@ def checkParent(pcr_client, pcr_clientList, pcr_nickList, nickList):
 
 
 # Send folder to Client
-def sendF2C(file_path, file_name, sender, clientList, nickList, pm = False, rcvNick = ""):
+def sendF2C(file_path, file_name, sender, clientList, nickList, pm = False, rcvNick = "", chunk_size = BUFFER_SIZE):
     global clients
 
     dataDict = {
-        'text' : None,
-        'array': None
+        'text' : '',
+        'array': chunk_size
     }
 
     # print("\'{}\' _ \'{}\' _ {}".format(file_path, file_name, sender))
@@ -156,8 +156,8 @@ def handle(client, clientList, nickList, pcr = False):
     global clients
     
     dataDict = {
-        'text' : None,
-        'array': None
+        'text' : '',
+        'array': ''
     }
     
     while True:
@@ -201,9 +201,10 @@ def handle(client, clientList, nickList, pcr = False):
                 # FILENAME = f'./{nickname}_rf/'
                 # os.makedirs(os.path.dirname(FILENAME), exist_ok=True)
                 # FILENAME = f'./{nickname}_rf/' + dataDict['array']
+                CHUNK_SIZE = int(dataDict["array"])
                 file = open(file_path, "wb")
                 while True:
-                    chunk = client.recv(4096)
+                    chunk = client.recv(CHUNK_SIZE)
                     try:
                         json.loads(chunk.decode())
                         break
@@ -221,10 +222,10 @@ def handle(client, clientList, nickList, pcr = False):
 
 
                 if message[:14] == "\\sendF <@all> ":
-                    sendF2C(file_path, file_name, client, clientList, nickList, False, "")
+                    sendF2C(file_path, file_name, client, clientList, nickList, False, "", CHUNK_SIZE)
                 else:
                     rcvNick = message[message.find('<') + 1 : message.find('>')]
-                    sendF2C(file_path, file_name, client, clientList, nickList, True, rcvNick)
+                    sendF2C(file_path, file_name, client, clientList, nickList, True, rcvNick, CHUNK_SIZE)
 
                 # Delete temporary file in folder_server
                 cleanServerFolder(file_path, file_name)
@@ -408,8 +409,8 @@ def handle(client, clientList, nickList, pcr = False):
 # Receiving / Listening Function
 def receive():
     dataDict = {
-        'text' : None,
-        'array': None
+        'text' : '',
+        'array': ''
     }
     global clients
     global nicknames

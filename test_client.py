@@ -79,7 +79,8 @@ def rcvF_func(dataDict):
     file_path = folder + '/' + file_name
     file_size = int(message[message.find(' (') + 2 : message.find(') ') ])
 
-
+    CHUNK_SIZE = int(dataDict["array"])
+    print (CHUNK_SIZE)
     able2Write = False
     # with open(file_path, 'wb') as f:
     #     times = math.ceil(int(file_size)/BUFFER_SIZE)
@@ -91,7 +92,7 @@ def rcvF_func(dataDict):
 
     file = open(file_path, "wb")
     while True:
-        chunk = client.recv(4096)
+        chunk = client.recv(CHUNK_SIZE)
         try:
             json.loads(chunk.decode())
             break
@@ -118,8 +119,8 @@ def sendF_func(takenInput):
     global times
     
     dataDict = {
-        'text' : None,
-        'array': None
+        'text' : '',
+        'array': ''
     }
 
     if (not ('<' in takenInput)):
@@ -130,8 +131,15 @@ def sendF_func(takenInput):
     able2Write = False
 
     dataDict['text'] = "\\sendF <{}> ({}) -f {}".format(takenInput[takenInput.find('<') + 1: takenInput.find('>')], str(file_size), path2Name(file_path))
+    # Calculate an appropriate chunk_size
+    CHUNK_SIZE = BUFFER_SIZE
+    while (CHUNK_SIZE <= file_size and file_size % CHUNK_SIZE):
+        CHUNK_SIZE = CHUNK_SIZE + 1
+    dataDict["array"] = CHUNK_SIZE
     client.sendall(json.dumps(dataDict).encode())
-
+    print (file_size)
+    print (CHUNK_SIZE)
+    print (file_size % CHUNK_SIZE)
     # times =  math.ceil(int(file_size)/BUFFER_SIZE)
     # with open(file_path, 'rb') as f:
     #     for i in range(times):
@@ -230,8 +238,8 @@ def parentCheck():
     global able2Write
     
     dataDict = {
-        'text': None,
-        'array': None
+        'text': '',
+        'array': ''   
     }
 
     dataDict['text'] = "\\parentCheck"
@@ -256,8 +264,8 @@ def receive():
     global pcr_nickname
 
     dataDict = {
-        'text' : None,
-        'array': None
+        'text' : '',
+        'array': ''
     }
 
 
@@ -382,8 +390,8 @@ def write():
     okMess = True
 
     dataDict = {
-        'text' : None,
-        'array': None
+        'text' : '',
+        'array': ''
     }
 
     while WRITE_STATUS:
