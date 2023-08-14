@@ -3,10 +3,11 @@ import threading
 import json
 import os
 import math
+import sys
 
 # Connection Data
-host = '127.0.0.1'
-port = 55555
+host = sys.argv[1]
+port = sys.argv[2]
 
 # Default
 BUFFER_SIZE = 4096
