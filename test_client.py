@@ -190,7 +190,7 @@ def createPCR(pcr_rcv):
 
     command_to_run = [
         'cd {}'.format(os.getcwd()),
-        'python test_client.py {} {}'.format(nickname, pcr_rcv)
+        'python test_client.py {} {} {} {}'.format(host,port,nickname,pcr_rcv)
     ]
 
     # threading.Thread(target= open_new_terminal, args=(command_to_run, )).start()
