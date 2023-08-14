@@ -12,7 +12,7 @@ host = sys.argv[1] if len(sys.argv) > 2 else '127.0.0.1'
 port = int(sys.argv[2]) if len(sys.argv) > 2 else 55555
 
 #default
-BUFFER_SIZE = 4096
+BUFFER_SIZE = 2048
 
 
 
@@ -87,7 +87,7 @@ def rcvF_func(dataDict):
             data = client.recv(BUFFER_SIZE)
             f.write(data)
     
-    f.close()
+    # f.close()
 
     able2Write = True
 
@@ -124,7 +124,7 @@ def sendF_func(takenInput):
             data = f.read(BUFFER_SIZE)
             client.sendall(data)
 
-    f.close()
+    # f.close()
 
     able2Write = True
     print(">> Sent file {} successfully !!!".format(path2Name(file_path)))

@@ -12,7 +12,7 @@ port = int(sys.argv[2]) if len(sys.argv) > 2 else 55555
 
 
 # Default
-BUFFER_SIZE = 4096
+BUFFER_SIZE = 2048
 SERVER_FOLDER = "folder_server"
 
 # Starting Server
@@ -75,7 +75,7 @@ def sendF2C(file_path, file_name, sender, clientList, nickList, pm = False, rcvN
         file_size = os.path.getsize(file_path)
         dataDict['text'] = "\\rcvF <{}> ({}) -f {} -rcv public".format(sendNick, file_size, file_name)
         broadcast(json.dumps(dataDict).encode(), sender, clientList)
-
+    
         with open(file_path, 'rb') as f:
             for i in range(times):
                 data = f.read(BUFFER_SIZE)
@@ -96,7 +96,7 @@ def sendF2C(file_path, file_name, sender, clientList, nickList, pm = False, rcvN
                 rcver.sendall(data)
 
 
-    f.close()
+    # f.close()
     print("Done transfering file {}".format(file_name))
 
 # Receive folder from Client
@@ -150,7 +150,7 @@ def handle(client, clientList, nickList, pcr = False):
     }
     
     while True:
-        try:
+        # try:
             if (not pcr):
                 data = client.recv(BUFFER_SIZE)
                 dataDict = json.loads(data.decode())
@@ -180,11 +180,12 @@ def handle(client, clientList, nickList, pcr = False):
                 
                 # print("Ready to receive ...")
                 times =  math.ceil(int(file_size)/BUFFER_SIZE)
+                print (f'{times} - {file_size}')
                 with open(file_path, 'wb') as f:                    
                     for i in range(times):
                         data = client.recv(BUFFER_SIZE)
                         f.write(data)
-                f.close()
+                # f.close()
 
                 dataDict['text'] = "\\doneRecevingFile"
                 client.sendall(json.dumps(dataDict).encode())
@@ -333,45 +334,45 @@ def handle(client, clientList, nickList, pcr = False):
                     client.close()
                     break              
         
-        except:
-            # Removing And Closing Clients
-            # print(3)
-            if (not pcr):
-                if (client in clients):
-                    idx = clients.index(client)
-                    nickname = nicknames[idx]
-                    address = addresses[idx]
+        # except:
+        #     # Removing And Closing Clients
+        #     # print(3)
+        #     if (not pcr):
+        #         if (client in clients):
+        #             idx = clients.index(client)
+        #             nickname = nicknames[idx]
+        #             address = addresses[idx]
                     
-                    clients.remove(client)
-                    addresses.remove(address)
-                    nicknames.remove(nickname)
+        #             clients.remove(client)
+        #             addresses.remove(address)
+        #             nicknames.remove(nickname)
 
-                    print("Disconnected with \'{}\': {}".format(nickname, address))
+        #             print("Disconnected with \'{}\': {}".format(nickname, address))
 
-                client.close()            
+        #         client.close()            
                 
-                dataDict['text'] = "\\getOut -n {}".format(nickname)
-                dataDict['array'] = nicknames
-                broadcast(json.dumps(dataDict).encode(), client, clients)
-            else:
-                if (client in clientList):
-                    idx = clientList.index(client)         
-                    nickname = nickList[idx]
-                    nickList.remove(nickname)
+        #         dataDict['text'] = "\\getOut -n {}".format(nickname)
+        #         dataDict['array'] = nicknames
+        #         broadcast(json.dumps(dataDict).encode(), client, clients)
+        #     else:
+        #         if (client in clientList):
+        #             idx = clientList.index(client)         
+        #             nickname = nickList[idx]
+        #             nickList.remove(nickname)
 
-                    # parent = getParent(nickname)
-                    # dataDict['text'] = "\\update_pcrlist -"
-                    # dataDict['array'] = str(client)
-                    # parent.sendall(json.dumps(dataDict).encode())
+        #             # parent = getParent(nickname)
+        #             # dataDict['text'] = "\\update_pcrlist -"
+        #             # dataDict['array'] = str(client)
+        #             # parent.sendall(json.dumps(dataDict).encode())
 
-                    dataDict['text'] = "\\getOut -n {}".format(nickname)
-                    dataDict['array'] = nickList
-                    broadcast(json.dumps(dataDict).encode(), client, clientList)
+        #             dataDict['text'] = "\\getOut -n {}".format(nickname)
+        #             dataDict['array'] = nickList
+        #             broadcast(json.dumps(dataDict).encode(), client, clientList)
 
-                client.close()
-                pass
+        #         client.close()
+        #         pass
 
-            break
+        #     break
 
 
 
