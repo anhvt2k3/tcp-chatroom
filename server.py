@@ -4,7 +4,7 @@ import json
 import sys
 
 # Connection Data
-host = '192.168.0.199'
+host = '10.128.49.23'
 port = 49153
 
 # Starting Server

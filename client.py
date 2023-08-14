@@ -11,7 +11,7 @@ nickname = sys.argv[1] if len(sys.argv) > 1 else input("Choose your nickname: ")
 
 # Connecting To Server
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(('192.168.0.199', 49153))
+client.connect(('10.128.49.23', 49153))
 
 PM = False
 beginChatting = True
