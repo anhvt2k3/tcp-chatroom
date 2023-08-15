@@ -389,12 +389,12 @@ def write():
                 print("!ERROR: Cannot use private message in PCR")
                 continue
             else:
-                tmp = takenInput[takenInput.find(" <") + len(" <"): takenInput.find("> ")]
-                checkVar = nickCheck(tmp)
-                if checkVar == 1:
+                checkNick = takenInput[takenInput.find(" <") + len(" <"): takenInput.find("> ")]
+                check = nickCheck(checkNick)
+                if (check == 1):
                     dataDict['text'] = takenInput
-                elif checkVar == -1:
-                    print("!ERROR: \'{}\' is not existed".format(tmp))
+                elif check == -1:
+                    print("!ERROR: \'{}\' is not existed".format(checkNick))
                     continue
                 else:
                     print("!ERROR: Cannot use private message with yourself!")
@@ -403,9 +403,9 @@ def write():
         # To send file "\sendF <@all> file's path"
         elif (takenInput[:len("\\sendF ")] == "\\sendF "):    
             if ('<' in takenInput):
-                tmp = takenInput[takenInput.find(" <") + 2: takenInput.find('> ')]
+                checkNick = takenInput[takenInput.find(" <") + 2: takenInput.find('> ')]
                 path = takenInput[takenInput.find("> ") + len("> "):]
-                check = nickCheck(tmp)
+                check = nickCheck(checkNick)
             else: 
                 check = 1
                 path = takenInput[takenInput.find(" ") + len(" "):]
@@ -421,7 +421,7 @@ def write():
                 else: 
                     print("!ERROR: The inputted directory is not existed")
                 continue
-            elif (checkVar == -1):
+            elif (check == -1):
                 print("!ERROR: {} is not existed".format(checkNick))
                 continue
             else:
@@ -435,10 +435,10 @@ def write():
                 continue
             else:
                 checkNick = takenInput[takenInput.find(" <") + len(" <") : takenInput.find("> ")]
-                checkVar = nickCheck(checkNick)
-                if (checkVar == 1):
+                check = nickCheck(checkNick)
+                if (check == 1):
                     dataDict['text'] = "\\pcr -s {} -r {}".format(nickname, checkNick)
-                elif (checkVar == -1):
+                elif (check == -1):
                     print("!ERROR: \'{}\' is not existed".format(checkNick))
                     continue
                 else:
