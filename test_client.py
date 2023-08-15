@@ -49,113 +49,7 @@ folder = ""
 times = -1
 
 
-
-# Get file_name from file_path
-def path2Name(file_path):
-    if ('/' in file_path):
-        tmp = file_path[::-1]
-        tmp = tmp[: tmp.find('/')]
-        return tmp[::-1]
-
-    elif ('\\' in file_path):
-        tmp = file_path[::-1]
-        tmp = tmp[: tmp.find('\\')]
-        return tmp[::-1]
-    else:
-        return file_path    
-
-def rcvF_func(dataDict):
-    global able2Write
-    global folder
-
-    #Format: \senF <sender_name> file_name
-    message = dataDict['text']
-    sendNick = message[message.find(' <') + 2 : message.find('> ')]
-    file_name = message[message.find('-f ') + 3 : message.find('-rcv') - 1]
-    folder = "folder_" + nickname.replace(" ", "")
-
-    if not os.path.exists(folder):
-        os.makedirs(folder)
-    file_path = folder + '/' + file_name
-    file_size = int(message[message.find(' (') + 2 : message.find(') ') ])
-
-    CHUNK_SIZE = int(dataDict["array"])
-    able2Write = False
-    # with open(file_path, 'wb') as f:
-    #     times = math.ceil(int(file_size)/BUFFER_SIZE)
-    #     for i in range(times):
-    #         data = client.recv(BUFFER_SIZE)
-    #         f.write(data)
-
-
-
-    file = open(file_path, "wb")
-    while True:
-        chunk = client.recv(CHUNK_SIZE)
-        try:
-            json.loads(chunk.decode())
-            break
-        except:
-            file.write(chunk)
-            continue            
-    print ('>> File {} received!')
-    file.close()
-
-    # f.close()
-
-    able2Write = True
-
-    # Print out 
-    if ("public" in message):
-        print ("{}: sent file {}, saved as {}".format(sendNick, file_name, file_path))
-    else:
-        print ("{} (PM): sent file {}, saved as {}".format(sendNick, file_name, file_path))
-
-def sendF_func(takenInput):
-    global able2Write
-    global file_path
-    global file_size
-    global times
-    
-    dataDict = {
-        'text' : '',
-        'array': ''
-    }
-
-    if (not ('<' in takenInput)):
-        takenInput = takenInput[:7] + "<@all> " + takenInput[7:]
-    
-    file_path = takenInput[takenInput.find("> ") + 2:]
-    file_size = os.path.getsize(file_path)    
-    able2Write = False
-
-    dataDict['text'] = "\\sendF <{}> ({}) -f {}".format(takenInput[takenInput.find('<') + 1: takenInput.find('>')], str(file_size), path2Name(file_path))
-    # Calculate an appropriate chunk_size
-    # CHUNK_SIZE = BUFFER_SIZE
-    # while (CHUNK_SIZE <= file_size and file_size % CHUNK_SIZE):
-    #     CHUNK_SIZE = CHUNK_SIZE + 1
-    # if file_size < CHUNK_SIZE: CHUNK_SIZE = file_size
-    CHUNK_SIZE = file_size
-    dataDict["array"] = CHUNK_SIZE
-    client.sendall(json.dumps(dataDict).encode())
-    # times =  math.ceil(int(file_size)/BUFFER_SIZE)
-    # with open(file_path, 'rb') as f:
-    #     for i in range(times):
-    #         data = f.read(BUFFER_SIZE)
-    #         client.sendall(data)
-
-
-    file = open(f'./{file_path}', "rb")
-    client.sendall(file.read())
-    client.sendall(json.dumps(dataDict).encode())
-    print ('>> File {} sent!'.format(file_path))
-    file.close()
-
-
-    # f.close()
-
-    able2Write = True
-
+# Process for the valid nickname
 def getNickname(dataDict):
     global nicknames
     global nickname
@@ -185,6 +79,7 @@ def getNickname(dataDict):
     able2Write = True
     folder = "folder_" + nickname.replace(" ", "")
 
+# Check the if the valid receiver
 def nickCheck(checkNick, sendF = False):
     global nickname
     global nicknames
@@ -197,52 +92,137 @@ def nickCheck(checkNick, sendF = False):
         return -1
     return 1
 
-def checkDir(path):
-    if os.path.exists(path):
-        if os.path.isfile(path):
+# Get file_name from file_path
+def path2Name(file_path):
+    if ('/' in file_path):
+        tmp = file_path[::-1]
+        tmp = tmp[: tmp.find('/')]
+        return tmp[::-1]
+
+    elif ('\\' in file_path):
+        tmp = file_path[::-1]
+        tmp = tmp[: tmp.find('\\')]
+        return tmp[::-1]
+    else:
+        return file_path    
+
+# Sending file
+def sendF_func(takenInput):
+    global able2Write
+    global file_path
+    global file_size
+    global times
+    
+    dataDict = {
+        'text' : None,
+        'array': None
+    }
+
+
+    if (not ('<' in takenInput)):
+        takenInput = takenInput[:7] + "<@all> " + takenInput[7:]
+    
+    file_path = takenInput[takenInput.find("> ") + 2:]
+    file_size = os.path.getsize(file_path)    
+    able2Write = False
+
+    dataDict['text'] = "\\sendF <{}> ({}) -f {}".format(takenInput[takenInput.find('<') + 1: takenInput.find('>')], str(file_size), path2Name(file_path))
+    dataDict['array'] = file_size
+    client.sendall(json.dumps(dataDict).encode())
+    
+
+    file = open(f'./{file_path}', "rb")
+    client.sendall(file.read())
+    file.close()
+    
+    able2Write = True
+    print ('>> File {} sent!'.format(file_path))
+
+# Receiving file
+def rcvF_func(dataDict):
+    global able2Write
+    global folder
+
+    #Format: \senF <sender_name> file_name
+    message = dataDict['text']
+    sendNick = message[message.find(' <') + 2 : message.find('> ')]
+    file_name = message[message.find('-f ') + 3 : message.find('-rcv') - 1]
+    folder = "folder_" + nickname.replace(" ", "")
+
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+    file_path = folder + '/' + file_name
+    file_size = int(message[message.find(' (') + 2 : message.find(') ') ])
+
+    chunk_size = file_size
+    able2Write = False
+
+    file = open(file_path, "wb")
+    
+    chunk = client.recv(chunk_size)
+    try: json.loads(chunk.decode())        
+    except: file.write(chunk)  
+         
+    file.close()
+
+    able2Write = True
+
+    # Print out 
+    if ("public" in message):
+        print ("{}: sent file {}, saved as {}".format(sendNick, file_name, file_path))
+    else:
+        print ("{} (PM): sent file {}, saved as {}".format(sendNick, file_name, file_path))
+
+# Check valid directory
+def checkDir(file_path):
+    if os.path.exists(file_path):
+        if os.path.isfile(file_path):
             return 1
-        elif os.path.isdir(path):
+        elif os.path.isdir(file_path):
             return 0
         
     return -1
 
-def removeDir(path):
-    path = Path(path)
-    if path.is_dir():
-        for child in path.iterdir():
+# Remove directory
+def removeDir(file_path):
+    file_path = Path(file_path)
+    if file_path.is_dir():
+        for child in file_path.iterdir():
             if child.is_file():
                 child.unlink()
             else:
                 removeDir(child)
-        path.rmdir()
-        # print(f"Folder '{path}' and its contents removed.")
+        file_path.rmdir()
 
-def createPCR(pcr_rcv):
+# Create Private chat room
+def createPCR(pcr_rcver):
     def open_new_terminal(commands):
         commands = " & ".join(commands)
         subprocess.run(["start", "cmd", "/c", f'{commands}'], shell = True)
 
     command_to_run = [
         'cd {}'.format(os.getcwd()),
-        'python test_client.py {} {} {} {}'.format(host,port,nickname,pcr_rcv)
+        'python test_client.py {} {} {} {}'.format(host, port,nickname, pcr_rcver)
     ]
 
     # threading.Thread(target= open_new_terminal, args=(command_to_run, )).start()
     open_new_terminal(command_to_run)
 
-def parentCheck():
-
+# Check the parent
+def parentCheck():    
     global able2Write
-    
+    able2Write = False
+
     dataDict = {
-        'text': '',
-        'array': ''   
+        'text': None,
+        'array': None   
     }
 
     dataDict['text'] = "\\parentCheck"
     dataDict['array'] = nickname
 
     client.sendall(json.dumps(dataDict).encode())
+
 
 
 
@@ -257,12 +237,11 @@ def receive():
     global nicknames
     global nickname
     global folder
-    global inMainRoom
     global pcr_nickname
 
     dataDict = {
-        'text' : '',
-        'array': ''
+        'text' : None,
+        'array': None
     }
 
 
@@ -281,52 +260,53 @@ def receive():
                 getnick_thread = threading.Thread(target = getNickname, args =(dataDict,))
                 getnick_thread.start()
 
-            elif (message == "\\connected"):
-                message = ">> Connected to server!"
-
+            # Handle the when the server done it receving file work
             elif (message == "\\doneRecevingFile"):
                 mtx = True
 
+            # Handle receiving file from server
             elif (message[:len("\\rcvF ")] == "\\rcvF "):
                 rcvF_func(dataDict)
 
+            # Handle PCR invoke from server 
             elif (message[:len("\\invoke_pcr ")] == "\\invoke_pcr "):
                 name = message[message.find('-n ') + 3:]
                 print(">> You will join private chat room with {}".format(name))
                 createPCR(name)
-
+            
+            # Handle the update normal list
             elif (message == "\\update_list"):
                 nicknames = dataDict['array']
 
+            # Handle the update PCR list
             elif (message[:len("\\update_pcrlist ")] == "\\update_pcrlist "):
                 if ('+' in message):
                     pcr_clients.append(dataDict['array'])
                 if ('-' in message):
                     pcr_clients.remove(dataDict['array'])
 
+            # Handle the response from server if the parent of PCR is alive or not
             elif (message == "\\parentCheck"):
+                PARENT_STATUS = True
                 if (dataDict['array'] == "False"): 
                     PARENT_STATUS = False
-                    # print("not OK")
-                else:   pass # print("OK")
 
                 able2Write = True
 
+            # Handle when you left the chat
             elif (message == "\\close_all"):
                 print(">> You left the chat!")
-                
                 WRITE_STATUS = False
                 if (not inPCR):
                     folder = "folder_" + nickname.replace(" ", "")
                     removeDir(folder)
 
-
                 dataDict['array'] = pcr_clients
                 client.sendall(json.dumps(dataDict).encode())
-
                 client.close()
                 break
 
+            # Handle when another user is left the chat
             elif (message[:len("\\getOut ")] == "\\getOut "):
                 print(">> {} left the chat!".format(message[message.find("-n ") + 3:]))
                 nicknames = dataDict['array']
@@ -334,32 +314,19 @@ def receive():
                 if (inPCR):
                     dataDict['text'] = "\\pcr_updateList"
                     client.sendall(json.dumps(dataDict).encode())
-                    pass
 
-            elif (message == "\\quit"):
-                WRITE_STATUS = False
-                dataDict['text'] = "\\hError"
-                client.sendall(json.dumps(dataDict).encode())
-
-                print(">> You left the chat!1")
-                WRITE_STATUS = False
-                
-                if (not inPCR):
-                    folder = "folder_" + nickname.replace(" ", "")
-                    removeDir(folder)
-                
-                client.close()
-
+            # Normal message
             else:
                 print(message)
-            
+        
+        # Eception handle
         except:
             print("An error occured!")
 
-            dataDict['text'] = "\\hError"
+            dataDict['text'] = "\\exception"
             client.sendall(json.dumps(dataDict).encode())
             
-            print(">> You left the chat!2.1")
+            print(">> You left the chat!")
             WRITE_STATUS = False
             if (not inPCR):
                 folder = "folder_" + nickname.replace(" ", "")
@@ -382,37 +349,33 @@ def write():
     global file_size
     global folder
     global times
-    global inMainRoom
-    
-    okMess = True
 
     dataDict = {
-        'text' : '',
-        'array': ''
+        'text' : None,
+        'array': None
     }
 
     while WRITE_STATUS:
-
-        # able2Write = False
-
-        if (not FIRST_RUN and inPCR):
+        if (inPCR and (not FIRST_RUN)):
             while (not mtx): pass
             parentCheck()
 
-        if (not FIRST_RUN and not inPCR):
+        if ((not inPCR) and (not FIRST_RUN)):
             able2Write = True
 
 
         while (not able2Write): pass
         FIRST_RUN = False
         
-        if (inPCR): 
+        if (inPCR):
             if (not PARENT_STATUS):
-                dataDict['text'] = "\\hError"
-                dataDict["array"] = "\\deadParent"
+                dataDict['text'] = "\\uParent"
                 client.sendall(json.dumps(dataDict).encode())
                 break
+        
 
+
+        # Take input from keyboard
         takenInput = input('')
         if (takenInput == ""): continue
 
@@ -452,7 +415,7 @@ def write():
                 check = checkDir(path)
 
                 if (check == 1):
-                    mtx = False
+                    if (inPCR): mtx = False
                     sendF_func(takenInput)
                 elif (check == 0):
                     print("!ERROR: Cannot send a folder")
@@ -469,7 +432,7 @@ def write():
         # To invite user to private chat room "\pChat <name>"
         elif (takenInput[:len("\\pcr <")] == "\\pcr <"):
             if (inPCR):
-                print("*NOTICE: Please create new PCR in Main chat!")
+                print("*NOTICE: Please create new PCR in Main chat room!")
                 continue
             else:
                 checkNick = takenInput[takenInput.find(" <") + len(" <") : takenInput.find("> ")]
@@ -488,10 +451,10 @@ def write():
             dataDict['text'] = "{}: {}".format(nickname, takenInput)
 
 
-        
-        if (WRITE_STATUS and okMess):
+        if (WRITE_STATUS):
             client.sendall(json.dumps(dataDict).encode())
         
+        # Handle when the message is "bye!"
         if (takenInput == "bye!"):
             WRITE_STATUS = False
 
