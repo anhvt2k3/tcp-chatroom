@@ -212,6 +212,8 @@ def handle(client, clientList, nickList, pcr = False):
                         file.write(chunk)
                         continue            
                 print ('>> File {} received!')
+                print (os.path.getsize(file_name))
+                print (os.path.getsize(file_path))
                 file.close()
 
 

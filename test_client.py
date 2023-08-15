@@ -267,7 +267,7 @@ def receive():
 
 
     while True:
-        # try:
+        try:
             # Receive Message From Server
             data = client.recv(BUFFER_SIZE)
             dataDict = json.loads(data.decode())
@@ -352,20 +352,20 @@ def receive():
             else:
                 print(message)
             
-        # except:
-        #     print("An error occured!")
+        except:
+            print("An error occured!")
 
-        #     dataDict['text'] = "\\hError"
-        #     client.sendall(json.dumps(dataDict).encode())
+            dataDict['text'] = "\\hError"
+            client.sendall(json.dumps(dataDict).encode())
             
-        #     print(">> You left the chat!2.1")
-        #     WRITE_STATUS = False
-        #     if (not inPCR):
-        #         folder = "folder_" + nickname.replace(" ", "")
-        #         removeDir(folder)
+            print(">> You left the chat!2.1")
+            WRITE_STATUS = False
+            if (not inPCR):
+                folder = "folder_" + nickname.replace(" ", "")
+                removeDir(folder)
             
-        #     client.close()
-        #     break
+            client.close()
+            break
 
 
 # Sending Messages To Server
