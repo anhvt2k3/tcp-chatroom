@@ -2,8 +2,8 @@ import socket
 import threading
 import json
 import os
-import math
 import sys
+
 
 
 
@@ -116,9 +116,6 @@ def checkParent(pcr_client, pcr_clientList, pcr_nickList, nickList):
     else: return False
 
     pass
-
-
-
 
 
 

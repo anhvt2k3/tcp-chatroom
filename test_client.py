@@ -2,10 +2,13 @@ import socket
 import threading
 import json
 import os
-import math
 from pathlib import Path
 import subprocess
 import sys
+
+
+
+
 
 # Connection Data
 host = sys.argv[1] if len(sys.argv) > 2 else '127.0.0.1'
@@ -14,12 +17,10 @@ port = int(sys.argv[2]) if len(sys.argv) > 2 else 55555
 #default
 BUFFER_SIZE = 4096
 
-
-
 # Input Nickname
 nickname = sys.argv[3] if len(sys.argv) > 3 else input("Choose your nickname: ")
 
-# 4 private chat room
+# For private chat room (PCR)
 inPCR = False
 pcr_nickname = ""
 if (len(sys.argv) > 3): 
@@ -37,16 +38,15 @@ WRITE_STATUS = True
 PARENT_STATUS = True
 FIRST_RUN = True
 
-nicknames = []
-pcr_clients = []
 able2Write = False
 mtx = True
 
+nicknames = []
+pcr_clients = []
 
 file_path = ""
 file_size = - 1
 folder = ""
-times = -1
 
 
 # Process for the valid nickname
@@ -111,7 +111,6 @@ def sendF_func(takenInput):
     global able2Write
     global file_path
     global file_size
-    global times
     
     dataDict = {
         'text' : None,
@@ -222,6 +221,7 @@ def parentCheck():
     dataDict['array'] = nickname
 
     client.sendall(json.dumps(dataDict).encode())
+
 
 
 
@@ -348,7 +348,6 @@ def write():
     global file_path
     global file_size
     global folder
-    global times
 
     dataDict = {
         'text' : None,
