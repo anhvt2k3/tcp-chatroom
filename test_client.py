@@ -134,6 +134,7 @@ def sendF_func(takenInput):
     CHUNK_SIZE = BUFFER_SIZE
     while (CHUNK_SIZE <= file_size and file_size % CHUNK_SIZE):
         CHUNK_SIZE = CHUNK_SIZE + 1
+    if file_size < CHUNK_SIZE: CHUNK_SIZE = file_size
     dataDict["array"] = CHUNK_SIZE
     client.sendall(json.dumps(dataDict).encode())
     # times =  math.ceil(int(file_size)/BUFFER_SIZE)
