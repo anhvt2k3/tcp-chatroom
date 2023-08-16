@@ -278,13 +278,6 @@ def receive():
             elif (message == "\\update_list"):
                 nicknames = dataDict['array']
 
-            # Handle the update PCR list
-            elif (message[:len("\\update_pcrlist ")] == "\\update_pcrlist "):
-                if ('+' in message):
-                    pcr_clients.append(dataDict['array'])
-                if ('-' in message):
-                    pcr_clients.remove(dataDict['array'])
-
             # Handle the response from server if the parent of PCR is alive or not
             elif (message == "\\parentCheck"):
                 PARENT_STATUS = True
@@ -300,9 +293,7 @@ def receive():
                 if (not inPCR):
                     folder = "folder_" + nickname.replace(" ", "")
                     removeDir(folder)
-
-                dataDict['array'] = pcr_clients
-                client.sendall(json.dumps(dataDict).encode())
+                    
                 client.close()
                 break
 

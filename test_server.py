@@ -266,60 +266,53 @@ def handle(client, clientList, nickList, pcr = False):
                     addresses.remove(address)
 
                     print("Disconnected with \'{}\': {}".format(nickname, address))
+                    
+                    dataDict['text'] = "\\close_all"
+                    client.sendall(json.dumps(dataDict).encode())
 
                     dataDict['text'] = "\\getOut -n {}".format(nickname)
                     dataDict['array'] = nicknames
                     broadcast(json.dumps(dataDict).encode(), client, clients)
-
-                    dataDict['text'] = "\\close_all"
-                    client.sendall(json.dumps(dataDict).encode())
 
                     client.close()
                     break
                 
                 # Handle exiting private chat room (PCR)
                 if (pcr and dataDict['text'] == nickList[idx] + ': bye!'):
-                    if (client in clientList):
-                        idx = clientList.index(client)
-                        nickname = nickList[idx]
-                        
-                        clientList.remove(client)
-                        nickList.remove(nickname)
+                    idx = clientList.index(client)
+                    nickname = nickList[idx]
+                    
+                    clientList.remove(client)
+                    nickList.remove(nickname)
 
-                        dataDict['text'] = "\\close_all"
-                        client.sendall(json.dumps(dataDict).encode())
+                    dataDict['text'] = "\\close_all"
+                    client.sendall(json.dumps(dataDict).encode())
 
-                        parent = getParent(nickname)
-                        dataDict['text'] = "\\update_pcrlist -"
-                        dataDict['array'] = str(client)
-                        parent.sendall(json.dumps(dataDict).encode())
-
-                        dataDict['text'] = "\\getOut -n {}".format(nickname)
-                        dataDict['array'] = nickList
-                        broadcast(json.dumps(dataDict).encode(), client, clientList)
-
-                    client.close()
+                    dataDict['text'] = "\\getOut -n {}".format(nickname)
+                    dataDict['array'] = nickList
+                    broadcast(json.dumps(dataDict).encode(), client, clientList)
+                    
+                    client.close()                
                     break              
         
         except:
             # Removing And Closing Clients
             if (not pcr):
-                if (client in clients):
-                    idx = clients.index(client)
-                    nickname = nicknames[idx]
-                    address = addresses[idx]
-                    
-                    clients.remove(client)
-                    addresses.remove(address)
-                    nicknames.remove(nickname)
+                idx = clients.index(client)
+                nickname = nicknames[idx]
+                address = addresses[idx]
+                
+                clients.remove(client)
+                addresses.remove(address)
+                nicknames.remove(nickname)
 
-                    print("Disconnected with \'{}\': {}".format(nickname, address))
-
-                client.close()            
+                print("Disconnected with \'{}\': {}".format(nickname, address))
                 
                 dataDict['text'] = "\\getOut -n {}".format(nickname)
                 dataDict['array'] = nicknames
                 broadcast(json.dumps(dataDict).encode(), client, clients)
+
+                client.close()
             else:
                 if (client in clientList):
                     idx = clientList.index(client)         
@@ -331,7 +324,6 @@ def handle(client, clientList, nickList, pcr = False):
                     broadcast(json.dumps(dataDict).encode(), client, clientList)
 
                 client.close()
-                pass
 
             break
 
@@ -397,15 +389,15 @@ def receive():
                     thread = threading.Thread(target = handle, args = (pcr_client, pcr_clients[:2], pcr_nicknames[:2], True,))
                     thread.start()
 
-                parent = getParent(pcr_nicknames[0])
-                dataDict['text'] = "\\update_pcrlist +"
-                dataDict['array'] = str(pcr_clients[0])
-                parent.sendall(json.dumps(dataDict).encode())
+                # parent = getParent(pcr_nicknames[0])
+                # dataDict['text'] = "\\update_pcrlist +"
+                # dataDict['array'] = str(pcr_clients[0])
+                # parent.sendall(json.dumps(dataDict).encode())
 
-                parent = getParent(pcr_nicknames[1])
-                dataDict['text'] = "\\update_pcrlist +"
-                dataDict['array'] = str(pcr_clients[1])
-                parent.sendall(json.dumps(dataDict).encode())
+                # parent = getParent(pcr_nicknames[1])
+                # dataDict['text'] = "\\update_pcrlist +"
+                # dataDict['array'] = str(pcr_clients[1])
+                # parent.sendall(json.dumps(dataDict).encode())
 
                 pcr_nicknames = pcr_nicknames[2:]
                 pcr_clients = pcr_clients[2:]
