@@ -33,7 +33,6 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect((host, port))
 
 
-RECEIVE_STATUS = True
 WRITE_STATUS = True
 PARENT_STATUS = True
 FIRST_RUN = True
@@ -226,9 +225,8 @@ def parentCheck():
 
 
 
-# Listening to Server and Sending Nickname
+# Listening to Server
 def receive():
-    global RECEIVE_STATUS
     global WRITE_STATUS
     global PARENT_STATUS
     global able2Write
@@ -327,9 +325,8 @@ def receive():
             break
 
 
-# Sending Messages To Server
+# Getting input
 def write():
-    global RECEIVE_STATUS
     global WRITE_STATUS
     global PARENT_STATUS
     global FIRST_RUN

@@ -42,8 +42,8 @@ def broadcastAll(message, clientList):
 # Update list for all clients in list
 def broadcastCList(rcvers, nicknameList):
     dataDict = {
-        'text': '',
-        'array': ''
+        'text': None,
+        'array': None
     }
 
     dataDict['text'] = '\\update_list'
@@ -54,7 +54,7 @@ def broadcastCList(rcvers, nicknameList):
 
 # Send folder to Client
 def sendF2C(file_path, file_name, sender, clientList, nickList, pm = False, rcvNick = ""):
-
+    global clients
     dataDict = {
         'text' : None,
         'array': None
@@ -115,15 +115,12 @@ def checkParent(pcr_client, pcr_clientList, pcr_nickList, nickList):
         return True
     else: return False
 
-    pass
 
 
 
 
-
-# Handling Messages From Clients
+# Handling messages from clients
 def handle(client, clientList, nickList, pcr = False):
-    global times
     global nicknames
     global clients
     
@@ -328,7 +325,7 @@ def handle(client, clientList, nickList, pcr = False):
             break
 
 
-# Receiving / Listening Function
+# First receving from clients
 def receive():
     dataDict = {
         'text' : None,
@@ -394,5 +391,4 @@ def receive():
 
 
 print("Server is listening ...")
-
 receive()
