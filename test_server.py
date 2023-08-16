@@ -331,8 +331,8 @@ def handle(client, clientList, nickList, pcr = False):
 # Receiving / Listening Function
 def receive():
     dataDict = {
-        'text' : '',
-        'array': ''
+        'text' : None,
+        'array': None
     }
     global clients
     global nicknames
@@ -388,16 +388,6 @@ def receive():
                 for pcr_client in pcr_clients[:2]:
                     thread = threading.Thread(target = handle, args = (pcr_client, pcr_clients[:2], pcr_nicknames[:2], True,))
                     thread.start()
-
-                # parent = getParent(pcr_nicknames[0])
-                # dataDict['text'] = "\\update_pcrlist +"
-                # dataDict['array'] = str(pcr_clients[0])
-                # parent.sendall(json.dumps(dataDict).encode())
-
-                # parent = getParent(pcr_nicknames[1])
-                # dataDict['text'] = "\\update_pcrlist +"
-                # dataDict['array'] = str(pcr_clients[1])
-                # parent.sendall(json.dumps(dataDict).encode())
 
                 pcr_nicknames = pcr_nicknames[2:]
                 pcr_clients = pcr_clients[2:]

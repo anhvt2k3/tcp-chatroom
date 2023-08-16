@@ -290,10 +290,10 @@ def receive():
             elif (message == "\\close_all"):
                 print(">> You left the chat!")
                 WRITE_STATUS = False
-                if (not inPCR):
-                    folder = "folder_" + nickname.replace(" ", "")
-                    removeDir(folder)
-                    
+                # if (not inPCR):
+                #     folder = "folder_" + nickname.replace(" ", "")
+                    # removeDir(folder)
+
                 client.close()
                 break
 
