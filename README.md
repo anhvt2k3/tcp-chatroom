@@ -1,4 +1,6 @@
 # tcp-chatroom
+This project is about creating a chatroom that sends out TCP packets between Server and Client to fulfill basic chatting tasks.
+
 ## How to use?
 1. All the users must be connected to the same wireless network.
 2. The user on Server side run `python server.py`
